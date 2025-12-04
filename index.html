@@ -3,548 +3,591 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Strategic Retrofit Assessment | Scenario A</title>
+    <title>Stochastic Constraint Solver | Digital Twin</title>
     <style>
-        /* THE MCKINSEY / TIER-1 AESTHETIC 
-           - Stark White Backgrounds
-           - "ThinkCell" Style Charts
-           - Serif Headings (Georgia/Times), Sans-Serif Data (Arial/Helvetica)
-           - Precision over Decoration
-        */
-
         :root {
-            --bg-paper: #ffffff;
-            --bg-offset: #f4f4f4;
-            --text-ink: #111111;
-            --text-sub: #555555;
-            --border-light: #dcdcdc;
-            --border-heavy: #000000;
-            --mck-blue: #051c2c; /* Deep Navy */
-            --mck-blue-light: #e6f0f5;
-            --alert-red: #a31d1d;
-            --font-serif: 'Georgia', 'Times New Roman', serif;
-            --font-sans: 'Helvetica Neue', 'Arial', sans-serif;
+            --bg: #ffffff;
+            --text-main: #111;
+            --text-sub: #666;
+            --line-light: #e0e0e0;
+            --mck-blue: #051c2c;
+            --accent-alert: #d93025;
+            --accent-ok: #188038;
+            --accent-warn: #f9ab00;
         }
 
         body {
-            background-color: var(--bg-offset);
-            color: var(--text-ink);
-            font-family: var(--font-sans);
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text-main);
             margin: 0;
             padding: 40px;
-            -webkit-font-smoothing: antialiased;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
         }
 
-        .sheet {
-            background: var(--bg-paper);
+        .header {
             width: 100%;
             max-width: 1200px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
-            padding: 60px;
-            display: grid;
-            grid-template-columns: 280px 1fr; /* Sidebar | Main Content */
-            gap: 60px;
-            border-top: 6px solid var(--mck-blue);
-        }
-
-        /* TYPOGRAPHY */
-        h1 {
-            font-family: var(--font-serif);
-            font-weight: normal;
-            font-size: 28px;
-            margin: 0 0 10px 0;
-            color: var(--mck-blue);
-        }
-
-        .subtitle {
-            font-family: var(--font-sans);
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: var(--text-sub);
-            border-bottom: 1px solid var(--border-heavy);
-            padding-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            border-bottom: 4px solid var(--mck-blue);
+            padding-bottom: 10px;
             margin-bottom: 30px;
         }
 
-        h2 {
-            font-family: var(--font-serif);
-            font-size: 18px;
-            border-bottom: 1px solid var(--border-light);
-            padding-bottom: 8px;
-            margin-top: 0;
-            margin-bottom: 20px;
-            color: var(--text-ink);
+        .title h1 {
+            font-family: 'Georgia', serif;
+            font-size: 24px;
+            margin: 0;
+            color: var(--mck-blue);
+        }
+        
+        .title span {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-sub);
         }
 
-        /* INPUT PANEL (Left Rail) */
+        .kpi-row {
+            display: flex;
+            gap: 40px;
+        }
+
+        .kpi {
+            text-align: right;
+        }
+        .kpi-val { font-size: 28px; font-weight: bold; color: var(--mck-blue); }
+        .kpi-lbl { font-size: 10px; text-transform: uppercase; color: var(--text-sub); }
+
+        /* MAIN STAGE */
+        .stage {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 40px;
+            width: 100%;
+            max-width: 1200px;
+            height: 100%;
+        }
+
+        /* CONTROLS */
         .controls {
+            border-right: 1px solid var(--line-light);
+            padding-right: 30px;
             display: flex;
             flex-direction: column;
             gap: 25px;
+            overflow-y: auto;
         }
 
-        .control-group {
-            margin-bottom: 10px;
+        .control-group { margin-bottom: 10px; }
+        .group-header {
+            font-size: 12px; 
+            font-weight: bold; 
+            margin-bottom: 10px; 
+            color: var(--mck-blue);
+            border-bottom: 1px solid var(--line-light);
+            padding-bottom: 5px;
         }
 
-        .control-group label {
-            display: block;
-            font-size: 11px;
-            font-weight: 700;
-            color: var(--text-sub);
-            margin-bottom: 6px;
-            text-transform: uppercase;
-        }
-
-        .input-wrapper {
+        .slider-row {
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid var(--border-light);
-            padding-bottom: 4px;
+            margin-bottom: 5px;
         }
-
-        .input-wrapper:focus-within {
-            border-bottom: 1px solid var(--mck-blue);
-        }
-
-        input {
+        
+        label { font-size: 11px; color: var(--text-sub); }
+        .val-disp { font-size: 11px; font-weight: bold; font-family: monospace; }
+        
+        input[type=range] {
             width: 100%;
+            margin: 5px 0 15px 0;
+            accent-color: var(--mck-blue);
+        }
+
+        button {
+            background: var(--mck-blue);
+            color: white;
             border: none;
-            background: transparent;
-            font-family: var(--font-mono); /* Use mono for input alignment */
-            font-size: 14px;
-            color: var(--text-ink);
-            outline: none;
-            text-align: right;
-            padding-right: 10px;
-        }
-
-        .unit {
-            font-size: 11px;
-            color: var(--text-sub);
-            width: 40px;
-        }
-
-        .slider-control {
-            margin-top: 5px;
-            width: 100%;
-            opacity: 0.3;
+            padding: 12px;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
             transition: opacity 0.2s;
         }
-        .slider-control:hover { opacity: 1; }
+        button:hover { opacity: 0.9; }
+        button.reset { background: #f1f3f4; color: #333; margin-top: 10px; }
 
-        /* MAIN STAGE (Right Rail) */
-        .dashboard {
+        /* SIMULATION CANVAS */
+        .sim-container {
+            position: relative;
+            background: #fafafa;
+            border: 1px solid var(--line-light);
             display: flex;
             flex-direction: column;
-            gap: 40px;
         }
 
-        /* EXECUTIVE SUMMARY ROW */
-        .exec-summary {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
-            background: var(--mck-blue-light);
-            padding: 25px;
-            border-left: 4px solid var(--mck-blue);
+        canvas {
+            width: 100%;
+            height: 400px;
+            border-bottom: 1px solid var(--line-light);
         }
 
-        .kpi-box h3 {
-            margin: 0 0 5px 0;
-            font-size: 11px;
-            text-transform: uppercase;
-            color: var(--text-sub);
-        }
-
-        .kpi-value {
-            font-family: var(--font-serif);
-            font-size: 32px;
-            color: var(--mck-blue);
-        }
-
-        .kpi-sub {
-            font-size: 12px;
-            color: var(--text-sub);
-            margin-top: 5px;
-        }
-
-        /* SENSITIVITY MATRIX & MAC CURVE */
-        .analysis-grid {
+        .analysis-panel {
+            flex-grow: 1;
+            padding: 20px;
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 40px;
+            gap: 20px;
         }
 
-        /* TABLE STYLING */
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 12px;
-        }
-        
-        th {
-            text-align: left;
-            font-weight: normal;
-            color: var(--text-sub);
-            border-bottom: 1px solid var(--border-heavy);
-            padding: 8px 4px;
-        }
-
-        td {
-            padding: 8px 4px;
-            border-bottom: 1px solid var(--border-light);
-            font-family: var(--font-mono); /* Alignment */
-        }
-
-        .num-cell { text-align: right; }
-        .row-label { font-family: var(--font-sans); color: var(--text-ink); }
-
-        /* SENSITIVITY MATRIX SPECIFIC */
-        .matrix-cell {
-            text-align: center;
-            padding: 10px;
-            font-weight: bold;
-        }
-        .matrix-header {
-            text-align: center;
-            font-weight: bold;
-            font-size: 10px;
-            background: #f0f0f0;
-        }
-        .positive-impact { background-color: rgba(74, 222, 128, 0.15); color: #166534; }
-        .negative-impact { background-color: rgba(248, 113, 113, 0.15); color: var(--alert-red); }
-
-        /* FOOTNOTES */
-        .footer {
-            margin-top: 40px;
-            border-top: 1px solid var(--border-light);
-            padding-top: 15px;
-            font-size: 10px;
-            color: var(--text-sub);
-            font-style: italic;
-        }
-        
-        .insight-text {
-            font-family: var(--font-serif);
-            font-size: 15px;
+        .insight-box {
+            font-size: 13px;
             line-height: 1.5;
-            color: var(--text-ink);
-            margin-bottom: 20px;
+            color: #333;
         }
+        .insight-box strong { color: var(--mck-blue); }
+        
+        .legend {
+            display: flex;
+            gap: 15px;
+            font-size: 10px;
+            margin-top: 10px;
+            color: var(--text-sub);
+        }
+        .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 
     </style>
 </head>
 <body>
 
-<div class="sheet">
-    
-    <div class="controls">
-        <div style="margin-bottom: 30px;">
-            <div style="font-weight: bold; font-size: 11px; color: var(--mck-blue); margin-bottom: 5px;">PROJECT</div>
-            <div style="font-family: var(--font-serif); font-size: 18px;">HVAC Electrification</div>
+<div class="header">
+    <div class="title">
+        <span>Operations Strategy Practice</span>
+        <h1>Constraint Solver v1.0</h1>
+    </div>
+    <div class="kpi-row">
+        <div class="kpi">
+            <div class="kpi-val" id="dispThroughput">0</div>
+            <div class="kpi-lbl">Units / Hour</div>
         </div>
-
-        <div class="control-group">
-            <label>WACC (Discount Rate)</label>
-            <div class="input-wrapper">
-                <input type="number" id="wacc" value="8.5" step="0.1" oninput="runModel()">
-                <span class="unit">%</span>
-            </div>
+        <div class="kpi">
+            <div class="kpi-val" id="dispOEE">0%</div>
+            <div class="kpi-lbl">System OEE</div>
         </div>
-
-        <div class="control-group">
-            <label>Energy Price (Electricity)</label>
-            <div class="input-wrapper">
-                <input type="number" id="energyCost" value="0.14" step="0.01" oninput="runModel()">
-                <span class="unit">$/kWh</span>
-            </div>
-        </div>
-        
-        <div class="control-group">
-            <label>Energy Price Escalator</label>
-            <div class="input-wrapper">
-                <input type="number" id="energyEscalator" value="3.0" step="0.1" oninput="runModel()">
-                <span class="unit">% YoY</span>
-            </div>
-        </div>
-
-        <div class="control-group">
-            <label>Carbon Tax (Shadow Price)</label>
-            <div class="input-wrapper">
-                <input type="number" id="carbonTax" value="80" step="5" oninput="runModel()">
-                <span class="unit">$/t</span>
-            </div>
-        </div>
-
-        <hr style="border: 0; border-top: 1px solid var(--border-light); margin: 20px 0;">
-
-        <div class="control-group">
-            <label>Implementation Capex</label>
-            <div class="input-wrapper">
-                <input type="number" id="capex" value="2500000" step="10000" oninput="runModel()">
-                <span class="unit">USD</span>
-            </div>
-            <input type="range" class="slider-control" min="1000000" max="5000000" step="50000" id="capexSlider" value="2500000" oninput="syncInputs('capex', this.value)">
-        </div>
-
-        <div class="control-group">
-            <label>Baseline Energy Consumption</label>
-            <div class="input-wrapper">
-                <input type="number" id="baseLoad" value="12000000" step="10000" oninput="runModel()">
-                <span class="unit">kWh</span>
-            </div>
-        </div>
-
-        <div class="control-group">
-            <label>Efficiency Gain (Conservative)</label>
-            <div class="input-wrapper">
-                <input type="number" id="effGain" value="28" step="1" oninput="runModel()">
-                <span class="unit">%</span>
-            </div>
-             <input type="range" class="slider-control" min="10" max="60" step="1" id="effGainSlider" value="28" oninput="syncInputs('effGain', this.value)">
-        </div>
-        
-        <div class="control-group">
-            <label>Grid Intensity</label>
-            <div class="input-wrapper">
-                <input type="number" id="gridIntensity" value="0.42" step="0.01" oninput="runModel()">
-                <span class="unit">kg/kWh</span>
-            </div>
+        <div class="kpi">
+            <div class="kpi-val" id="dispWIP">0</div>
+            <div class="kpi-lbl">Avg WIP</div>
         </div>
     </div>
+</div>
 
-    <div class="dashboard">
-        <div>
-            <h1>Impact Assessment Model</h1>
-            <div class="subtitle">Decarbonization Strategy Practice // Client: Confidential Industrial</div>
+<div class="stage">
+    
+    <div class="controls">
+        <div class="insight-box" style="margin-bottom: 20px; font-style: italic; color: #555;">
+            "Average capacity lies. Variance kills."<br>
+            <span style="font-size: 10px; color: #999;">Adjust variability (Sigma) to see how lines fail even when average speed is balanced.</span>
+        </div>
+
+        <div class="control-group">
+            <div class="group-header">STATION 1 (Feeder)</div>
+            <div class="slider-row"><label>Avg Cycle Time (sec)</label><span class="val-disp" id="v_ct1">3.0</span></div>
+            <input type="range" min="1.0" max="10.0" step="0.1" value="3.0" oninput="updateParam(0, 'mean', this.value)">
             
-            <div class="insight-text" id="executiveInsight">
-                Calculating logic...
-            </div>
+            <div class="slider-row"><label>Variance (Sigma)</label><span class="val-disp" id="v_sig1">0.5</span></div>
+            <input type="range" min="0.0" max="3.0" step="0.1" value="0.5" oninput="updateParam(0, 'sigma', this.value)">
         </div>
 
-        <div class="exec-summary">
-            <div class="kpi-box">
-                <h3>Net Present Value (10yr)</h3>
-                <div class="kpi-value" id="dispNPV">--</div>
-                <div class="kpi-sub" id="dispIRR">IRR: --%</div>
-            </div>
-            <div class="kpi-box">
-                <h3>Abatement Cost</h3>
-                <div class="kpi-value" id="dispMAC">--</div>
-                <div class="kpi-sub">$/tCO2e (Levelized)</div>
-            </div>
-            <div class="kpi-box">
-                <h3>Carbon Impact</h3>
-                <div class="kpi-value" id="dispCarbon">--</div>
-                <div class="kpi-sub">Tonnes Removed / Year</div>
-            </div>
-        </div>
-
-        <div class="analysis-grid">
+        <div class="control-group">
+            <div class="group-header">STATION 2 (Process)</div>
+            <div class="slider-row"><label>Avg Cycle Time (sec)</label><span class="val-disp" id="v_ct2">3.2</span></div>
+            <input type="range" min="1.0" max="10.0" step="0.1" value="3.2" oninput="updateParam(1, 'mean', this.value)">
             
-            <div class="section">
-                <h2>Sensitivity Analysis (NPV Impact)</h2>
-                <div style="font-size: 11px; color: var(--text-sub); margin-bottom: 10px;">Vertical: Energy Price Variance | Horizontal: Capex Variance</div>
-                <table id="sensitivityTable">
-                    </table>
-            </div>
-
-            <div class="section">
-                <h2>Cash Flow Projections (kUSD)</h2>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Year</th>
-                            <th class="num-cell">Energy Savings</th>
-                            <th class="num-cell">Carbon Credit</th>
-                            <th class="num-cell">Free Cash Flow</th>
-                        </tr>
-                    </thead>
-                    <tbody id="cashFlowTable">
-                        </tbody>
-                </table>
-            </div>
-
+            <div class="slider-row"><label>Variance (Sigma)</label><span class="val-disp" id="v_sig2">1.5</span></div>
+            <input type="range" min="0.0" max="3.0" step="0.1" value="1.5" oninput="updateParam(1, 'sigma', this.value)">
         </div>
 
-        <div class="footer">
-            Source: Client Operational Data, grid intensity factors based on regional average. WACC assumed constant over 10yr horizon. 
-            <br>Model Logic: DCF Analysis with sensitivity flex on key OpEx/CapEx drivers.
+        <div class="control-group">
+            <div class="group-header">BUFFER (Between 2 & 3)</div>
+            <div class="slider-row"><label>Max Capacity</label><span class="val-disp" id="v_buf">5</span></div>
+            <input type="range" min="0" max="50" step="1" value="5" oninput="updateBuffer(this.value)">
+        </div>
+
+        <div class="control-group">
+            <div class="group-header">STATION 3 (Bottleneck?)</div>
+            <div class="slider-row"><label>Avg Cycle Time (sec)</label><span class="val-disp" id="v_ct3">3.0</span></div>
+            <input type="range" min="1.0" max="10.0" step="0.1" value="3.0" oninput="updateParam(2, 'mean', this.value)">
+            
+            <div class="slider-row"><label>Variance (Sigma)</label><span class="val-disp" id="v_sig3">0.2</span></div>
+            <input type="range" min="0.0" max="3.0" step="0.1" value="0.2" oninput="updateParam(2, 'sigma', this.value)">
+        </div>
+
+        <button onclick="toggleSim()" id="btnToggle">Pause Simulation</button>
+        <button class="reset" onclick="resetSim()">Reset Data</button>
+    </div>
+
+    <div class="sim-container">
+        <canvas id="simCanvas"></canvas>
+        <div class="legend">
+            <div style="display:flex; align-items:center"><span class="dot" style="background:#188038; margin-right:5px;"></span> Running</div>
+            <div style="display:flex; align-items:center"><span class="dot" style="background:#f9ab00; margin-right:5px;"></span> Starved (No Input)</div>
+            <div style="display:flex; align-items:center"><span class="dot" style="background:#d93025; margin-right:5px;"></span> Blocked (Output Full)</div>
+        </div>
+        
+        <div class="analysis-panel">
+            <div class="insight-box">
+                <div style="font-weight:bold; font-size:11px; color:#999; text-transform:uppercase; margin-bottom:5px;">System Diagnostic</div>
+                <div id="textInsight">Initializing...</div>
+            </div>
+            <div class="insight-box">
+                <div style="font-weight:bold; font-size:11px; color:#999; text-transform:uppercase; margin-bottom:5px;">Loss Waterfall</div>
+                <div id="lossWaterfall" style="font-family: monospace; font-size:11px;">
+                    Theoretical Max: <span id="theoMax">--</span><br>
+                    Starvation Loss: <span id="starveLoss" style="color:#d93025">--</span><br>
+                    Blocking Loss:   <span id="blockLoss" style="color:#d93025">--</span><br>
+                    <strong>Actual Output: <span id="actualOut">--</span></strong>
+                </div>
+            </div>
         </div>
     </div>
 
 </div>
 
 <script>
-    // UTILITY: Formatting
-    const fmtUSD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format;
-    const fmtCompact = new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 1 }).format;
-    const fmtNum = (n) => n.toLocaleString('en-US', { maximumFractionDigits: 1 });
+    // --- SIMULATION ENGINE ---
 
-    function syncInputs(textId, val) {
-        document.getElementById(textId).value = val;
-        runModel();
+    const canvas = document.getElementById('simCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Fit canvas to container
+    function resize() {
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // Configuration
+    const STATIONS = [
+        { id: 0, name: "Feed", mean: 3.0, sigma: 0.5, state: 'idle', timer: 0, itemsProcessed: 0, starvedT: 0, blockedT: 0, totalT: 0 },
+        { id: 1, name: "Mix",  mean: 3.2, sigma: 1.5, state: 'idle', timer: 0, itemsProcessed: 0, starvedT: 0, blockedT: 0, totalT: 0 },
+        { id: 2, name: "Pack", mean: 3.0, sigma: 0.2, state: 'idle', timer: 0, itemsProcessed: 0, starvedT: 0, blockedT: 0, totalT: 0 }
+    ];
+
+    let BUFFERS = [0, 0]; // Buffer 0 (btw S1-S2), Buffer 1 (btw S2-S3)
+    let BUFFER_CAPS = [Infinity, 5]; // Buffer 0 is infinite (raw material), Buffer 1 is user controlled
+
+    // Sim State
+    let lastTime = 0;
+    let simRunning = true;
+    let totalTime = 0;
+    let particles = []; // Visual items moving
+
+    // --- LOGIC ---
+
+    // Box-Muller transform for normal distribution
+    function getGaussian(mean, sigma) {
+        let u = 0, v = 0;
+        while(u === 0) u = Math.random(); 
+        while(v === 0) v = Math.random();
+        let num = Math.sqrt( -2.0 * Math.log( u ) ) * Math.cos( 2.0 * Math.PI * v );
+        let res = num * sigma + mean;
+        return Math.max(0.1, res); // Clamp to positive
     }
 
-    function calculateNPV(rate, cashFlows) {
-        let npv = 0;
-        for (let t = 0; t < cashFlows.length; t++) {
-            npv += cashFlows[t] / Math.pow(1 + rate, t);
-        }
-        return npv;
+    function updateParam(idx, type, val) {
+        val = parseFloat(val);
+        STATIONS[idx][type] = val;
+        
+        // Update labels
+        if(type === 'mean') document.getElementById(`v_ct${idx+1}`).innerText = val.toFixed(1);
+        if(type === 'sigma') document.getElementById(`v_sig1`.replace('1', idx+1)).innerText = val.toFixed(1);
     }
 
-    // Simplified IRR approximation
-    function calculateIRR(cashFlows) {
-        let min = -1.0;
-        let max = 1.0;
-        let guess = 0.1;
-        let limit = 20; // iterations
-
-        // If total flow is negative, IRR is undefined/negative
-        const total = cashFlows.reduce((a,b) => a+b, 0);
-        if(total < 0) return -999; 
-
-        for(let i=0; i<limit; i++) {
-            let npv = calculateNPV(guess, cashFlows);
-            if(Math.abs(npv) < 1) break;
-            if(npv > 0) min = guess;
-            else max = guess;
-            guess = (min + max) / 2;
-        }
-        return guess * 100;
+    function updateBuffer(val) {
+        BUFFER_CAPS[1] = parseInt(val);
+        document.getElementById('v_buf').innerText = val;
     }
 
-    function runModel() {
-        // --- 1. HARVEST INPUTS ---
-        const wacc = parseFloat(document.getElementById('wacc').value) / 100;
-        const energyCost = parseFloat(document.getElementById('energyCost').value);
-        const energyEscalator = parseFloat(document.getElementById('energyEscalator').value) / 100;
-        const carbonTax = parseFloat(document.getElementById('carbonTax').value);
-        
-        const capex = parseFloat(document.getElementById('capex').value);
-        const baseLoad = parseFloat(document.getElementById('baseLoad').value);
-        const effGain = parseFloat(document.getElementById('effGain').value) / 100;
-        const gridIntensity = parseFloat(document.getElementById('gridIntensity').value);
+    function toggleSim() {
+        simRunning = !simRunning;
+        document.getElementById('btnToggle').innerText = simRunning ? "Pause Simulation" : "Resume";
+        if(simRunning) requestAnimationFrame(loop);
+    }
 
-        // --- 2. CORE LOGIC ---
-        
-        // Operational Impact
-        const energySavedKwh = baseLoad * effGain;
-        const carbonSavedTonnes = (energySavedKwh * gridIntensity) / 1000;
-        
-        // Financial Vectors (10 Years)
-        let cashFlows = [-capex]; // Year 0
-        let flowsDetails = [];
+    function resetSim() {
+        STATIONS.forEach(s => {
+            s.itemsProcessed = 0;
+            s.starvedT = 0;
+            s.blockedT = 0;
+            s.totalT = 0;
+            s.timer = 0;
+            s.state = 'idle';
+        });
+        BUFFERS = [0, 0];
+        particles = [];
+        totalTime = 0;
+        resize(); // clear canvas
+    }
 
-        for(let yr=1; yr<=10; yr++) {
-            // Energy Price escalates annually
-            let currentEnergyPrice = energyCost * Math.pow(1 + energyEscalator, yr-1);
-            
-            let savings = energySavedKwh * currentEnergyPrice;
-            let carbonCredit = carbonSavedTonnes * carbonTax; // Internal shadow price benefit
-            
-            // Simplified OpEx savings (Maintenance etc, assumed 2% of Capex avoided)
-            let maintSavings = capex * 0.02; 
+    function loop(timestamp) {
+        if (!simRunning) return;
+        
+        const dt = (timestamp - lastTime) / 1000; // Delta time in seconds
+        lastTime = timestamp;
+        
+        if (dt > 0.1) { requestAnimationFrame(loop); return; } // skip huge lag spikes
 
-            let fcf = savings + carbonCredit + maintSavings;
-            cashFlows.push(fcf);
-            
-            if(yr <= 5) { // Only store first 5 years for table to keep it clean
-                flowsDetails.push({ yr, savings, carbonCredit, fcf });
+        // Speed up sim multiplier
+        const SIM_SPEED = 5; 
+        const step = dt * SIM_SPEED;
+        totalTime += step;
+
+        // --- UPDATE STATIONS ---
+        
+        // Station 1 (Source)
+        // Always has input (Buffer 0 infinite). 
+        // Can be blocked if Buffer 1 (target) is full? No, S1 feeds S2 directly via implied buffer. 
+        // Let's model: S1 outputs to "Buffer 0" which is actually the Queue for S2.
+        // Simplified: S1 -> Queue1 -> S2 -> Queue2 -> S3 -> Out
+        
+        // Refined Architecture:
+        // S1 takes nothing, produces to Q1.
+        // S2 takes from Q1, produces to Q2.
+        // S3 takes from Q2, produces to Out.
+
+        // Station 1 Logic
+        let s1 = STATIONS[0];
+        s1.totalT += step;
+        if(s1.state === 'idle') {
+            // Check Blocked: Is Q1 full? (Let's say Q1 is infinite for this demo to focus on Q2)
+            // Start working
+            s1.state = 'working';
+            s1.timer = getGaussian(s1.mean, s1.sigma);
+        } else if(s1.state === 'working') {
+            s1.timer -= step;
+            if(s1.timer <= 0) {
+                // Finish
+                BUFFERS[0]++; // Add to Queue 1
+                s1.itemsProcessed++;
+                spawnParticle(0);
+                s1.state = 'idle';
             }
         }
 
-        // Metrics
-        const npv = calculateNPV(wacc, cashFlows);
-        const irr = calculateIRR(cashFlows);
-        
-        // Marginal Abatement Cost (MAC)
-        // Formula: (Net Cost of Project) / Total CO2 Reduced
-        // Net Cost = NPV of Costs - NPV of Benefits (excluding Carbon Tax benefit for "pure" cost)
-        // Simplified for this view: NPV / (10 * CarbonSaved). If NPV is positive, MAC is negative (good).
-        const totalCarbonOverHorizon = carbonSavedTonnes * 10;
-        const mac = -(npv / totalCarbonOverHorizon); 
-
-        // --- 3. RENDER UI ---
-
-        // KPI Box
-        const npvEl = document.getElementById('dispNPV');
-        npvEl.innerText = fmtCompact(npv);
-        npvEl.style.color = npv > 0 ? 'var(--text-ink)' : 'var(--alert-red)';
-        
-        const irrEl = document.getElementById('dispIRR');
-        irrEl.innerText = `IRR: ${irr === -999 ? 'N/A' : irr.toFixed(1) + '%'}`;
-        
-        const macEl = document.getElementById('dispMAC');
-        macEl.innerText = fmtNum(mac);
-        // If MAC is negative, it means we MAKE money while saving carbon. Highlighting logic:
-        macEl.style.color = mac < 0 ? '#166534' : 'var(--text-ink)'; 
-
-        document.getElementById('dispCarbon').innerText = fmtCompact(carbonSavedTonnes);
-
-        // Insight Generator
-        let insight = "";
-        if(npv > 0) {
-            insight = `Project is <strong>value accretive</strong>. With a WACC of ${wacc*100}%, the initiative yields an NPV of <strong>${fmtCompact(npv)}</strong>. The negative abatement cost ($${fmtNum(mac)}/t) indicates this is a 'no-regrets' move, purely operational efficiency driven.`;
-        } else {
-            insight = `Project is currently <strong>value destructive</strong> (NPV ${fmtCompact(npv)}). It requires a carbon price above <strong>$${(carbonTax + (mac)).toFixed(0)}/t</strong> to break even, or a reduction in Capex. It should be treated as a strategic compliance cost rather than an ROI play.`;
-        }
-        document.getElementById('executiveInsight').innerHTML = insight;
-
-        // Populate Table
-        let tableHTML = "";
-        flowsDetails.forEach(row => {
-            tableHTML += `<tr>
-                <td class="row-label">Year ${row.yr}</td>
-                <td class="num-cell">${fmtCompact(row.savings)}</td>
-                <td class="num-cell">${fmtCompact(row.carbonCredit)}</td>
-                <td class="num-cell" style="font-weight:bold">${fmtCompact(row.fcf)}</td>
-            </tr>`;
-        });
-        document.getElementById('cashFlowTable').innerHTML = tableHTML;
-
-        // --- 4. SENSITIVITY MATRIX GENERATOR ---
-        // We vary Energy Price (Y axis) vs Capex (X axis)
-        // Center point is current inputs. +/- 20%
-        
-        let sensHTML = '<tr><td></td><td class="matrix-header">-20% Capex</td><td class="matrix-header">Base Capex</td><td class="matrix-header">+20% Capex</td></tr>';
-        
-        const eVar = [0.8, 1.0, 1.2]; // Energy Price variations
-        const cVar = [0.8, 1.0, 1.2]; // Capex variations
-
-        eVar.reverse().forEach((eMod, i) => {
-            let rowHTML = `<tr><td class="matrix-header">${(eMod < 1 ? '-' : '+')}${Math.abs(Math.round((eMod-1)*100))}% Energy $</td>`;
-            
-            cVar.forEach(cMod => {
-                // Quick dirty recalc of NPV for this cell
-                let sCapex = capex * cMod;
-                let sCashFlows = [-sCapex];
-                for(let yr=1; yr<=10; yr++) {
-                    let sEnergyPrice = (energyCost * eMod) * Math.pow(1 + energyEscalator, yr-1);
-                    let sSavings = energySavedKwh * sEnergyPrice;
-                    let sCredit = carbonSavedTonnes * carbonTax;
-                    let sMaint = sCapex * 0.02;
-                    sCashFlows.push(sSavings + sCredit + sMaint);
+        // Station 2 Logic
+        let s2 = STATIONS[1];
+        s2.totalT += step;
+        if(s2.state === 'idle') {
+            // Check Starved
+            if(BUFFERS[0] > 0) {
+                // Check Blocked: Is Q2 full?
+                if(BUFFERS[1] < BUFFER_CAPS[1]) {
+                    // Start
+                    BUFFERS[0]--; // Consume
+                    s2.state = 'working';
+                    s2.timer = getGaussian(s2.mean, s2.sigma);
+                } else {
+                    s2.state = 'blocked';
                 }
-                let sNPV = calculateNPV(wacc, sCashFlows);
-                let colorClass = sNPV > 0 ? 'positive-impact' : 'negative-impact';
-                rowHTML += `<td class="matrix-cell ${colorClass}">${fmtCompact(sNPV)}</td>`;
-            });
-            rowHTML += "</tr>";
-            sensHTML += rowHTML;
+            } else {
+                s2.state = 'starved';
+            }
+        } else if(s2.state === 'working') {
+            s2.timer -= step;
+            if(s2.timer <= 0) {
+                // Check Blocked on Eject?
+                if(BUFFERS[1] < BUFFER_CAPS[1]) {
+                    BUFFERS[1]++;
+                    s2.itemsProcessed++;
+                    spawnParticle(1);
+                    s2.state = 'idle';
+                } else {
+                    s2.state = 'blocked'; // Stuck holding part
+                }
+            }
+        } else if(s2.state === 'blocked') {
+            s2.blockedT += step;
+            if(BUFFERS[1] < BUFFER_CAPS[1]) {
+                if(s2.timer <= 0) { // Was holding finished part
+                     BUFFERS[1]++;
+                     s2.itemsProcessed++;
+                     spawnParticle(1);
+                     s2.state = 'idle';
+                } else { // Was waiting to start
+                     BUFFERS[0]--;
+                     s2.state = 'working';
+                     s2.timer = getGaussian(s2.mean, s2.sigma);
+                }
+            }
+        } else if(s2.state === 'starved') {
+            s2.starvedT += step;
+            if(BUFFERS[0] > 0) s2.state = 'idle';
+        }
+
+        // Station 3 Logic
+        let s3 = STATIONS[2];
+        s3.totalT += step;
+        if(s3.state === 'idle') {
+            if(BUFFERS[1] > 0) {
+                BUFFERS[1]--;
+                s3.state = 'working';
+                s3.timer = getGaussian(s3.mean, s3.sigma);
+            } else {
+                s3.state = 'starved';
+            }
+        } else if(s3.state === 'working') {
+            s3.timer -= step;
+            if(s3.timer <= 0) {
+                s3.itemsProcessed++;
+                spawnParticle(2);
+                s3.state = 'idle';
+            }
+        } else if(s3.state === 'starved') {
+            s3.starvedT += step;
+            if(BUFFERS[1] > 0) s3.state = 'idle';
+        }
+
+        // --- DRAWING ---
+        draw();
+        updateMetrics();
+
+        requestAnimationFrame(loop);
+    }
+
+    function spawnParticle(stageIdx) {
+        // Visual candy
+        let startX = 100 + (stageIdx * 300);
+        particles.push({ x: startX, y: 200, stage: stageIdx, life: 1.0 });
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw Connection Lines
+        ctx.strokeStyle = '#e0e0e0';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(100, 200);
+        ctx.lineTo(700, 200);
+        ctx.stroke();
+
+        // Draw Stations
+        STATIONS.forEach((s, i) => {
+            let x = 100 + (i * 300);
+            let y = 200;
+            
+            // Color based on state
+            let color = '#ccc';
+            if(s.state === 'working') color = '#188038'; // Green
+            if(s.state === 'starved') color = '#f9ab00'; // Yellow
+            if(s.state === 'blocked') color = '#d93025'; // Red
+            
+            // Machine Box
+            ctx.fillStyle = color;
+            ctx.fillRect(x - 40, y - 40, 80, 80);
+            
+            // Text
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 14px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(s.name, x, y + 5);
+            
+            // State Text
+            ctx.font = '10px Arial';
+            ctx.fillText(s.state.toUpperCase(), x, y + 25);
+            
+            // Stats
+            ctx.fillStyle = '#333';
+            ctx.font = '11px monospace';
+            ctx.fillText(`Prod: ${s.itemsProcessed}`, x, y + 60);
         });
 
-        document.getElementById('sensitivityTable').innerHTML = sensHTML;
+        // Draw Buffers (Q1 is virtual/infinite, Q2 is visualized)
+        // Q2 is between S2 (x=400) and S3 (x=700) -> x=550
+        let bX = 550, bY = 200;
+        
+        // Buffer Container
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(bX - 30, bY - 30, 60, 60);
+        
+        // Buffer Fill
+        let fillH = Math.min(BUFFERS[1], BUFFER_CAPS[1]) / Math.max(1, BUFFER_CAPS[1]);
+        ctx.fillStyle = 'rgba(5, 28, 44, 0.2)';
+        ctx.fillRect(bX - 30, bY + 30, 60, -60 * fillH);
+        
+        ctx.fillStyle = '#111';
+        ctx.textAlign = 'center';
+        ctx.fillText(`Buffer: ${BUFFERS[1]}/${BUFFER_CAPS[1]}`, bX, bY + 50);
+
+        // Draw Particles
+        particles.forEach((p, i) => {
+            p.x += 5; // Move right
+            p.life -= 0.02;
+            
+            ctx.fillStyle = `rgba(5, 28, 44, ${p.life})`;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 6, 0, Math.PI*2);
+            ctx.fill();
+        });
+        particles = particles.filter(p => p.life > 0);
+    }
+
+    function updateMetrics() {
+        if(totalTime < 1) return;
+
+        // KPI Calculations
+        const throughput = (STATIONS[2].itemsProcessed / totalTime) * 3600; // Units per hour
+        const theoreticalMax = (3600 / Math.max(STATIONS[0].mean, STATIONS[1].mean, STATIONS[2].mean));
+        const oee = (throughput / theoreticalMax) * 100;
+
+        document.getElementById('dispThroughput').innerText = throughput.toFixed(0);
+        document.getElementById('dispOEE').innerText = oee.toFixed(1) + "%";
+        document.getElementById('dispWIP').innerText = BUFFERS[1]; // Simplified WIP
+
+        // Waterfall Logic
+        document.getElementById('theoMax').innerText = theoreticalMax.toFixed(0) + " u/h";
+        document.getElementById('actualOut').innerText = throughput.toFixed(0) + " u/h";
+        
+        // Insight Generation
+        let insight = "";
+        const s2 = STATIONS[1];
+        const s3 = STATIONS[2];
+        
+        const s2BlockPct = (s2.blockedT / totalTime) * 100;
+        const s3StarvePct = (s3.starvedT / totalTime) * 100;
+        
+        document.getElementById('starveLoss').innerText = "-" + ((s3StarvePct/100)*theoreticalMax).toFixed(0);
+        document.getElementById('blockLoss').innerText = "-" + ((s2BlockPct/100)*theoreticalMax).toFixed(0);
+
+        if (s3StarvePct > 20) {
+            insight += "Station 3 is <strong>STARVED</strong> for " + s3StarvePct.toFixed(0) + "% of the time. ";
+            if(s2.sigma > 1.0) {
+                insight += "The culprit is <strong>High Variance</strong> at Station 2, not speed. <br><br>Recommendation: Increase Buffer capacity or reduce Station 2 sigma (standardize work).";
+            } else {
+                insight += "Station 2 is simply too slow (Cycle Time mismatch).";
+            }
+        } else if (s2BlockPct > 20) {
+             insight += "Station 2 is <strong>BLOCKED</strong>. Station 3 is the clear bottleneck.";
+        } else {
+            insight += "System is running at near-optimal efficiency given constraints.";
+        }
+
+        document.getElementById('textInsight').innerHTML = insight;
     }
 
     // Init
-    runModel();
+    resize();
+    requestAnimationFrame(loop);
 
 </script>
 

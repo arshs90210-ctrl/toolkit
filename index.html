@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Strategic Retrofit Assessment | Scenario A</title>
+    <style>
+        /* THE MCKINSEY / TIER-1 AESTHETIC 
+           - Stark White Backgrounds
+           - "ThinkCell" Style Charts
+           - Serif Headings (Georgia/Times), Sans-Serif Data (Arial/Helvetica)
+           - Precision over Decoration
+        */
+
+        :root {
+            --bg-paper: #ffffff;
+            --bg-offset: #f4f4f4;
+            --text-ink: #111111;
+            --text-sub: #555555;
+            --border-light: #dcdcdc;
+            --border-heavy: #000000;
+            --mck-blue: #051c2c; /* Deep Navy */
+            --mck-blue-light: #e6f0f5;
+            --alert-red: #a31d1d;
+            --font-serif: 'Georgia', 'Times New Roman', serif;
+            --font-sans: 'Helvetica Neue', 'Arial', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-offset);
+            color: var(--text-ink);
+            font-family: var(--font-sans);
+            margin: 0;
+            padding: 40px;
+            -webkit-font-smoothing: antialiased;
+            display: flex;
+            justify-content: center;
+        }
+
+        .sheet {
+            background: var(--bg-paper);
+            width: 100%;
+            max-width: 1200px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            padding: 60px;
+            display: grid;
+            grid-template-columns: 280px 1fr; /* Sidebar | Main Content */
+            gap: 60px;
+            border-top: 6px solid var(--mck-blue);
+        }
+
+        /* TYPOGRAPHY */
+        h1 {
+            font-family: var(--font-serif);
+            font-weight: normal;
+            font-size: 28px;
+            margin: 0 0 10px 0;
+            color: var(--mck-blue);
+        }
+
+        .subtitle {
+            font-family: var(--font-sans);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-sub);
+            border-bottom: 1px solid var(--border-heavy);
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+
+        h2 {
+            font-family: var(--font-serif);
+            font-size: 18px;
+            border-bottom: 1px solid var(--border-light);
+            padding-bottom: 8px;
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: var(--text-ink);
+        }
+
+        /* INPUT PANEL (Left Rail) */
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .control-group {
+            margin-bottom: 10px;
+        }
+
+        .control-group label {
+            display: block;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-sub);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+        }
+
+        .input-wrapper {
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid var(--border-light);
+            padding-bottom: 4px;
+        }
+
+        .input-wrapper:focus-within {
+            border-bottom: 1px solid var(--mck-blue);
+        }
+
+        input {
+            width: 100%;
+            border: none;
+            background: transparent;
+            font-family: var(--font-mono); /* Use mono for input alignment */
+            font-size: 14px;
+            color: var(--text-ink);
+            outline: none;
+            text-align: right;
+            padding-right: 10px;
+        }
+
+        .unit {
+            font-size: 11px;
+            color: var(--text-sub);
+            width: 40px;
+        }
+
+        .slider-control {
+            margin-top: 5px;
+            width: 100%;
+            opacity: 0.3;
+            transition: opacity 0.2s;
+        }
+        .slider-control:hover { opacity: 1; }
+
+        /* MAIN STAGE (Right Rail) */
+        .dashboard {
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+        }
+
+        /* EXECUTIVE SUMMARY ROW */
+        .exec-summary {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            background: var(--mck-blue-light);
+            padding: 25px;
+            border-left: 4px solid var(--mck-blue);
+        }
+
+        .kpi-box h3 {
+            margin: 0 0 5px 0;
+            font-size: 11px;
+            text-transform: uppercase;
+            color: var(--text-sub);
+        }
+
+        .kpi-value {
+            font-family: var(--font-serif);
+            font-size: 32px;
+            color: var(--mck-blue);
+        }
+
+        .kpi-sub {
+            font-size: 12px;
+            color: var(--text-sub);
+            margin-top: 5px;
+        }
+
+        /* SENSITIVITY MATRIX & MAC CURVE */
+        .analysis-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+        }
+
+        /* TABLE STYLING */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        
+        th {
+            text-align: left;
+            font-weight: normal;
+            color: var(--text-sub);
+            border-bottom: 1px solid var(--border-heavy);
+            padding: 8px 4px;
+        }
+
+        td {
+            padding: 8px 4px;
+            border-bottom: 1px solid var(--border-light);
+            font-family: var(--font-mono); /* Alignment */
+        }
+
+        .num-cell { text-align: right; }
+        .row-label { font-family: var(--font-sans); color: var(--text-ink); }
+
+        /* SENSITIVITY MATRIX SPECIFIC */
+        .matrix-cell {
+            text-align: center;
+            padding: 10px;
+            font-weight: bold;
+        }
+        .matrix-header {
+            text-align: center;
+            font-weight: bold;
+            font-size: 10px;
+            background: #f0f0f0;
+        }
+        .positive-impact { background-color: rgba(74, 222, 128, 0.15); color: #166534; }
+        .negative-impact { background-color: rgba(248, 113, 113, 0.15); color: var(--alert-red); }
+
+        /* FOOTNOTES */
+        .footer {
+            margin-top: 40px;
+            border-top: 1px solid var(--border-light);
+            padding-top: 15px;
+            font-size: 10px;
+            color: var(--text-sub);
+            font-style: italic;
+        }
+        
+        .insight-text {
+            font-family: var(--font-serif);
+            font-size: 15px;
+            line-height: 1.5;
+            color: var(--text-ink);
+            margin-bottom: 20px;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="sheet">
+    
+    <div class="controls">
+        <div style="margin-bottom: 30px;">
+            <div style="font-weight: bold; font-size: 11px; color: var(--mck-blue); margin-bottom: 5px;">PROJECT</div>
+            <div style="font-family: var(--font-serif); font-size: 18px;">HVAC Electrification</div>
+        </div>
+
+        <div class="control-group">
+            <label>WACC (Discount Rate)</label>
+            <div class="input-wrapper">
+                <input type="number" id="wacc" value="8.5" step="0.1" oninput="runModel()">
+                <span class="unit">%</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>Energy Price (Electricity)</label>
+            <div class="input-wrapper">
+                <input type="number" id="energyCost" value="0.14" step="0.01" oninput="runModel()">
+                <span class="unit">$/kWh</span>
+            </div>
+        </div>
+        
+        <div class="control-group">
+            <label>Energy Price Escalator</label>
+            <div class="input-wrapper">
+                <input type="number" id="energyEscalator" value="3.0" step="0.1" oninput="runModel()">
+                <span class="unit">% YoY</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>Carbon Tax (Shadow Price)</label>
+            <div class="input-wrapper">
+                <input type="number" id="carbonTax" value="80" step="5" oninput="runModel()">
+                <span class="unit">$/t</span>
+            </div>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid var(--border-light); margin: 20px 0;">
+
+        <div class="control-group">
+            <label>Implementation Capex</label>
+            <div class="input-wrapper">
+                <input type="number" id="capex" value="2500000" step="10000" oninput="runModel()">
+                <span class="unit">USD</span>
+            </div>
+            <input type="range" class="slider-control" min="1000000" max="5000000" step="50000" id="capexSlider" value="2500000" oninput="syncInputs('capex', this.value)">
+        </div>
+
+        <div class="control-group">
+            <label>Baseline Energy Consumption</label>
+            <div class="input-wrapper">
+                <input type="number" id="baseLoad" value="12000000" step="10000" oninput="runModel()">
+                <span class="unit">kWh</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>Efficiency Gain (Conservative)</label>
+            <div class="input-wrapper">
+                <input type="number" id="effGain" value="28" step="1" oninput="runModel()">
+                <span class="unit">%</span>
+            </div>
+             <input type="range" class="slider-control" min="10" max="60" step="1" id="effGainSlider" value="28" oninput="syncInputs('effGain', this.value)">
+        </div>
+        
+        <div class="control-group">
+            <label>Grid Intensity</label>
+            <div class="input-wrapper">
+                <input type="number" id="gridIntensity" value="0.42" step="0.01" oninput="runModel()">
+                <span class="unit">kg/kWh</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard">
+        <div>
+            <h1>Impact Assessment Model</h1>
+            <div class="subtitle">Decarbonization Strategy Practice // Client: Confidential Industrial</div>
+            
+            <div class="insight-text" id="executiveInsight">
+                Calculating logic...
+            </div>
+        </div>
+
+        <div class="exec-summary">
+            <div class="kpi-box">
+                <h3>Net Present Value (10yr)</h3>
+                <div class="kpi-value" id="dispNPV">--</div>
+                <div class="kpi-sub" id="dispIRR">IRR: --%</div>
+            </div>
+            <div class="kpi-box">
+                <h3>Abatement Cost</h3>
+                <div class="kpi-value" id="dispMAC">--</div>
+                <div class="kpi-sub">$/tCO2e (Levelized)</div>
+            </div>
+            <div class="kpi-box">
+                <h3>Carbon Impact</h3>
+                <div class="kpi-value" id="dispCarbon">--</div>
+                <div class="kpi-sub">Tonnes Removed / Year</div>
+            </div>
+        </div>
+
+        <div class="analysis-grid">
+            
+            <div class="section">
+                <h2>Sensitivity Analysis (NPV Impact)</h2>
+                <div style="font-size: 11px; color: var(--text-sub); margin-bottom: 10px;">Vertical: Energy Price Variance | Horizontal: Capex Variance</div>
+                <table id="sensitivityTable">
+                    </table>
+            </div>
+
+            <div class="section">
+                <h2>Cash Flow Projections (kUSD)</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Year</th>
+                            <th class="num-cell">Energy Savings</th>
+                            <th class="num-cell">Carbon Credit</th>
+                            <th class="num-cell">Free Cash Flow</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cashFlowTable">
+                        </tbody>
+                </table>
+            </div>
+
+        </div>
+
+        <div class="footer">
+            Source: Client Operational Data, grid intensity factors based on regional average. WACC assumed constant over 10yr horizon. 
+            <br>Model Logic: DCF Analysis with sensitivity flex on key OpEx/CapEx drivers.
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // UTILITY: Formatting
+    const fmtUSD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format;
+    const fmtCompact = new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 1 }).format;
+    const fmtNum = (n) => n.toLocaleString('en-US', { maximumFractionDigits: 1 });
+
+    function syncInputs(textId, val) {
+        document.getElementById(textId).value = val;
+        runModel();
+    }
+
+    function calculateNPV(rate, cashFlows) {
+        let npv = 0;
+        for (let t = 0; t < cashFlows.length; t++) {
+            npv += cashFlows[t] / Math.pow(1 + rate, t);
+        }
+        return npv;
+    }
+
+    // Simplified IRR approximation
+    function calculateIRR(cashFlows) {
+        let min = -1.0;
+        let max = 1.0;
+        let guess = 0.1;
+        let limit = 20; // iterations
+
+        // If total flow is negative, IRR is undefined/negative
+        const total = cashFlows.reduce((a,b) => a+b, 0);
+        if(total < 0) return -999; 
+
+        for(let i=0; i<limit; i++) {
+            let npv = calculateNPV(guess, cashFlows);
+            if(Math.abs(npv) < 1) break;
+            if(npv > 0) min = guess;
+            else max = guess;
+            guess = (min + max) / 2;
+        }
+        return guess * 100;
+    }
+
+    function runModel() {
+        // --- 1. HARVEST INPUTS ---
+        const wacc = parseFloat(document.getElementById('wacc').value) / 100;
+        const energyCost = parseFloat(document.getElementById('energyCost').value);
+        const energyEscalator = parseFloat(document.getElementById('energyEscalator').value) / 100;
+        const carbonTax = parseFloat(document.getElementById('carbonTax').value);
+        
+        const capex = parseFloat(document.getElementById('capex').value);
+        const baseLoad = parseFloat(document.getElementById('baseLoad').value);
+        const effGain = parseFloat(document.getElementById('effGain').value) / 100;
+        const gridIntensity = parseFloat(document.getElementById('gridIntensity').value);
+
+        // --- 2. CORE LOGIC ---
+        
+        // Operational Impact
+        const energySavedKwh = baseLoad * effGain;
+        const carbonSavedTonnes = (energySavedKwh * gridIntensity) / 1000;
+        
+        // Financial Vectors (10 Years)
+        let cashFlows = [-capex]; // Year 0
+        let flowsDetails = [];
+
+        for(let yr=1; yr<=10; yr++) {
+            // Energy Price escalates annually
+            let currentEnergyPrice = energyCost * Math.pow(1 + energyEscalator, yr-1);
+            
+            let savings = energySavedKwh * currentEnergyPrice;
+            let carbonCredit = carbonSavedTonnes * carbonTax; // Internal shadow price benefit
+            
+            // Simplified OpEx savings (Maintenance etc, assumed 2% of Capex avoided)
+            let maintSavings = capex * 0.02; 
+
+            let fcf = savings + carbonCredit + maintSavings;
+            cashFlows.push(fcf);
+            
+            if(yr <= 5) { // Only store first 5 years for table to keep it clean
+                flowsDetails.push({ yr, savings, carbonCredit, fcf });
+            }
+        }
+
+        // Metrics
+        const npv = calculateNPV(wacc, cashFlows);
+        const irr = calculateIRR(cashFlows);
+        
+        // Marginal Abatement Cost (MAC)
+        // Formula: (Net Cost of Project) / Total CO2 Reduced
+        // Net Cost = NPV of Costs - NPV of Benefits (excluding Carbon Tax benefit for "pure" cost)
+        // Simplified for this view: NPV / (10 * CarbonSaved). If NPV is positive, MAC is negative (good).
+        const totalCarbonOverHorizon = carbonSavedTonnes * 10;
+        const mac = -(npv / totalCarbonOverHorizon); 
+
+        // --- 3. RENDER UI ---
+
+        // KPI Box
+        const npvEl = document.getElementById('dispNPV');
+        npvEl.innerText = fmtCompact(npv);
+        npvEl.style.color = npv > 0 ? 'var(--text-ink)' : 'var(--alert-red)';
+        
+        const irrEl = document.getElementById('dispIRR');
+        irrEl.innerText = `IRR: ${irr === -999 ? 'N/A' : irr.toFixed(1) + '%'}`;
+        
+        const macEl = document.getElementById('dispMAC');
+        macEl.innerText = fmtNum(mac);
+        // If MAC is negative, it means we MAKE money while saving carbon. Highlighting logic:
+        macEl.style.color = mac < 0 ? '#166534' : 'var(--text-ink)'; 
+
+        document.getElementById('dispCarbon').innerText = fmtCompact(carbonSavedTonnes);
+
+        // Insight Generator
+        let insight = "";
+        if(npv > 0) {
+            insight = `Project is <strong>value accretive</strong>. With a WACC of ${wacc*100}%, the initiative yields an NPV of <strong>${fmtCompact(npv)}</strong>. The negative abatement cost ($${fmtNum(mac)}/t) indicates this is a 'no-regrets' move, purely operational efficiency driven.`;
+        } else {
+            insight = `Project is currently <strong>value destructive</strong> (NPV ${fmtCompact(npv)}). It requires a carbon price above <strong>$${(carbonTax + (mac)).toFixed(0)}/t</strong> to break even, or a reduction in Capex. It should be treated as a strategic compliance cost rather than an ROI play.`;
+        }
+        document.getElementById('executiveInsight').innerHTML = insight;
+
+        // Populate Table
+        let tableHTML = "";
+        flowsDetails.forEach(row => {
+            tableHTML += `<tr>
+                <td class="row-label">Year ${row.yr}</td>
+                <td class="num-cell">${fmtCompact(row.savings)}</td>
+                <td class="num-cell">${fmtCompact(row.carbonCredit)}</td>
+                <td class="num-cell" style="font-weight:bold">${fmtCompact(row.fcf)}</td>
+            </tr>`;
+        });
+        document.getElementById('cashFlowTable').innerHTML = tableHTML;
+
+        // --- 4. SENSITIVITY MATRIX GENERATOR ---
+        // We vary Energy Price (Y axis) vs Capex (X axis)
+        // Center point is current inputs. +/- 20%
+        
+        let sensHTML = '<tr><td></td><td class="matrix-header">-20% Capex</td><td class="matrix-header">Base Capex</td><td class="matrix-header">+20% Capex</td></tr>';
+        
+        const eVar = [0.8, 1.0, 1.2]; // Energy Price variations
+        const cVar = [0.8, 1.0, 1.2]; // Capex variations
+
+        eVar.reverse().forEach((eMod, i) => {
+            let rowHTML = `<tr><td class="matrix-header">${(eMod < 1 ? '-' : '+')}${Math.abs(Math.round((eMod-1)*100))}% Energy $</td>`;
+            
+            cVar.forEach(cMod => {
+                // Quick dirty recalc of NPV for this cell
+                let sCapex = capex * cMod;
+                let sCashFlows = [-sCapex];
+                for(let yr=1; yr<=10; yr++) {
+                    let sEnergyPrice = (energyCost * eMod) * Math.pow(1 + energyEscalator, yr-1);
+                    let sSavings = energySavedKwh * sEnergyPrice;
+                    let sCredit = carbonSavedTonnes * carbonTax;
+                    let sMaint = sCapex * 0.02;
+                    sCashFlows.push(sSavings + sCredit + sMaint);
+                }
+                let sNPV = calculateNPV(wacc, sCashFlows);
+                let colorClass = sNPV > 0 ? 'positive-impact' : 'negative-impact';
+                rowHTML += `<td class="matrix-cell ${colorClass}">${fmtCompact(sNPV)}</td>`;
+            });
+            rowHTML += "</tr>";
+            sensHTML += rowHTML;
+        });
+
+        document.getElementById('sensitivityTable').innerHTML = sensHTML;
+    }
+
+    // Init
+    runModel();
+
+</script>
+
+</body>
+</html>

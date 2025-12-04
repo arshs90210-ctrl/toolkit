@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Alkegen Scheduler v6.1 (Stable Engine + Features)</title>
+  <title>Alkegen Scheduler v5.1 (Authenticated)</title>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -39,17 +39,69 @@
     .nav-btn:hover { color: var(--text-dark); background: white; shadow: 0 1px 2px rgba(0,0,0,0.05); }
     .nav-btn.active { background: white; color: var(--accent); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 
-    /* GANTT LAYOUT */
-    .gantt-wrapper { display: flex; flex: 1; overflow: hidden; position: relative; background: #f8fafc; }
-    .gantt-scroll-container { display: flex; flex: 1; overflow-y: auto; overflow-x: hidden; position: relative; }
-    .gantt-sidebar { width: 550px; background: white; border-right: 1px solid var(--border-light); display: flex; flex-direction: column; flex-shrink: 0; z-index: 20; position: sticky; left: 0; }
-    .gantt-chart { flex: 1; position: relative; overflow-x: auto; overflow-y: visible; cursor: grab; user-select: none; background: white; }
+    /* GANTT LAYOUT - FIXED SCROLLING */
+    .gantt-wrapper { 
+        display: flex; 
+        flex: 1; 
+        overflow: hidden; 
+        position: relative; 
+        background: #f8fafc; 
+    }
+    
+    /* The Main Container handles BOTH X and Y scrolling */
+    .gantt-scroll-container { 
+        display: flex; 
+        flex: 1; 
+        overflow: auto; /* Allow both scrollbars here */
+        position: relative; 
+        will-change: scroll-position;
+    }
+
+    /* Sidebar Sticks to the Left */
+    .gantt-sidebar { 
+        width: 550px; 
+        background: white; 
+        border-right: 1px solid var(--border-light); 
+        display: flex; 
+        flex-direction: column; 
+        flex-shrink: 0; 
+        
+        /* Sticky Positioning for Sidebar */
+        position: sticky; 
+        left: 0; 
+        z-index: 50; 
+        box-shadow: 4px 0 6px -1px rgba(0,0,0,0.05);
+    }
+
+    /* Chart just expands to fit content */
+    .gantt-chart { 
+        flex: 1; 
+        position: relative; 
+        overflow: visible; /* Let the parent handle scrolling */
+        background: white; 
+    }
+
+    /* Ensure Headers Line Up */
+    .gantt-header-row { 
+        display: flex; 
+        width: 100%; 
+        background: var(--bg-light); 
+        border-bottom: 1px solid var(--border-light); 
+        flex-shrink: 0;
+        z-index: 60;
+    }
+
+    .sidebar-header { width: 550px; flex-shrink: 0; background: #f1f5f9; border-right: 1px solid var(--border-light); z-index: 61; }
+    
+    .timeline-header-wrapper { 
+        flex: 1; 
+        overflow: hidden; /* Hide scrollbar here, we sync via JS */
+        position: relative; 
+        background: #f8fafc; 
+    }
     
     /* TABLES */
     .data-table { width: 100%; border-collapse: collapse; font-size: 11px; table-layout: fixed; }
-    .gantt-header-row { position: sticky; top: 0; z-index: 40; display: flex; width: 100%; background: var(--bg-light); border-bottom: 1px solid var(--border-light); }
-    .sidebar-header { width: 550px; flex-shrink: 0; background: #f1f5f9; border-right: 1px solid var(--border-light); z-index: 41; }
-    .timeline-header-wrapper { flex: 1; overflow: hidden; position: relative; background: #f8fafc; }
     .data-table th { background: #f1f5f9; color: #475569; text-align: left; padding: 12px 8px; border-bottom: 1px solid var(--border-light); font-weight: 700; text-transform: uppercase; height: 60px; box-sizing: border-box; }
     .data-table td { padding: 0 8px; border-bottom: 1px solid #f1f5f9; color: #334155; height: 40px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
     .data-table tr:hover { background: #f0f9ff; }
@@ -68,7 +120,7 @@
     .bar-card { background: #3b82f6; border-left: 3px solid #93c5fd; }
     .bar-fin { background: #8b5cf6; border-left: 3px solid #c4b5fd; }
     .bar-qc { background: #f97316; border-left: 3px solid #fdba74; }
-    .bar-forced { border: 2px solid #ef4444; }
+    .bar-forced { border: 2px solid #ef4444; } /* Red border for user overrides */
 
     /* UTILS */
     .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(2px); z-index: 1000; display: none; align-items: center; justify-content: center; }
@@ -76,19 +128,7 @@
     .tooltip { position: fixed; background: #1e293b; color: white; padding: 8px 12px; border-radius: 6px; font-size: 11px; z-index: 2000; pointer-events: none; display: none; }
     .late-row { background-color: #fef2f2 !important; }
     .late-text { color: #dc2626 !important; font-weight: bold; }
-    .override-text { color: #d97706; font-weight: bold; }
-
-    /* DIGITAL TWIN STYLES */
-    canvas#simCanvas { border: 1px solid #e2e8f0; background: #fafafa; width: 100%; height: 350px; border-radius: 8px; }
-    .dt-control-group { margin-bottom: 12px; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px; }
-    .dt-label { font-size: 10px; text-transform: uppercase; color: #64748b; font-weight: 700; display: block; margin-bottom: 4px; }
-    .dt-val { font-family: monospace; font-weight: bold; color: #2563eb; font-size: 11px; float: right; }
-    
-    /* RETROFIT STYLES ADAPTED */
-    .kpi-card-retro { background: white; border: 1px solid #e2e8f0; padding: 20px; border-radius: 12px; position: relative; overflow: hidden; }
-    .kpi-card-retro::before { content:''; position:absolute; top:0; left:0; width:4px; height:100%; background: #2563eb; }
-    .bar-group-retro { display: flex; flex-direction: column; justify-content: flex-end; flex: 1; height: 100%; position: relative; }
-    .bar-retro { width: 100%; border-radius: 4px 4px 0 0; transition: height 0.5s; min-height: 4px; }
+    .override-text { color: #d97706; font-weight: bold; } /* Amber for overrides */
   </style>
 </head>
 <body>
@@ -127,7 +167,6 @@
                 <h1 class="font-bold text-lg text-slate-800 leading-tight">Alkegen <span class="text-blue-600">Production</span></h1>
                 <div class="flex items-center gap-2 text-xs text-slate-500 font-medium">
                     <span class="w-2 h-2 rounded-full bg-green-500"></span> <span id="userRoleBadge">Viewer</span> Mode
-                    <span class="ml-2 px-1.5 py-0.5 bg-slate-100 border border-slate-200 rounded text-[9px] font-mono text-slate-400">v6.1 (Stable Engine)</span>
                 </div>
             </div>
         </div>
@@ -135,21 +174,23 @@
         <nav class="nav-group">
             <button onclick="switchView('gantt')" id="nav-gantt" class="nav-btn active"><i class="fa-solid fa-layer-group"></i>Schedule</button>
             <button onclick="switchView('sequencing')" id="nav-sequencing" class="nav-btn"><i class="fa-solid fa-route"></i>Sequencing</button>
+            <button onclick="switchView('staffing')" id="nav-staffing" class="nav-btn"><i class="fa-solid fa-users"></i>Staffing</button>
             <button onclick="switchView('rates')" id="nav-rates" class="nav-btn"><i class="fa-solid fa-sliders"></i>Rates</button>
-            <button onclick="switchView('twin')" id="nav-twin" class="nav-btn text-blue-600 bg-blue-50"><i class="fa-solid fa-microchip"></i>Digital Twin</button>
-            <button onclick="switchView('capex')" id="nav-capex" class="nav-btn text-green-600 bg-green-50"><i class="fa-solid fa-leaf"></i>ESG & CapEx</button>
             <button onclick="switchView('kpi')" id="nav-kpi" class="nav-btn"><i class="fa-solid fa-chart-pie"></i>Analytics</button>
             <button onclick="switchView('downtime')" id="nav-downtime" class="nav-btn"><i class="fa-solid fa-triangle-exclamation"></i>Downtime</button>
         </nav>
 
         <div class="flex items-center gap-3">
             <span id="userEmailDisplay" class="text-xs text-slate-400 mr-2 font-mono"></span>
+            
             <button onclick="showModal('uploadModal')" class="admin-only px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-lg shadow-sm transition flex items-center gap-2">
-                <i class="fa-solid fa-cloud-arrow-up"></i> Import
+                <i class="fa-solid fa-cloud-arrow-up"></i> Import Data
             </button>
+            
             <button onclick="exportExcel()" class="w-9 h-9 flex items-center justify-center text-green-600 hover:bg-green-50 rounded-lg border border-green-200 transition" title="Export Excel">
                 <i class="fa-solid fa-file-excel text-lg"></i>
             </button>
+
             <button onclick="handleLogout()" class="w-9 h-9 flex items-center justify-center text-slate-400 hover:bg-slate-100 rounded-lg border border-slate-200 transition" title="Logout">
                 <i class="fa-solid fa-right-from-bracket"></i>
             </button>
@@ -221,199 +262,28 @@
         </div>
     </div>
 
-    <div id="view-twin" class="flex-1 hidden bg-white p-6 fade-in overflow-auto">
-        <div class="max-w-7xl mx-auto h-full flex flex-col">
-            <div class="flex justify-between items-end mb-6">
-                <div>
-                    <h2 class="text-2xl font-bold text-slate-800">Stochastic Digital Twin</h2>
-                    <p class="text-sm text-slate-500">Simulate production variance on a specific line configuration.</p>
-                </div>
-                <div class="flex gap-4">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-500 mb-1">Target Felt Code</label>
-                        <select id="dtFeltSelect" class="bg-white border border-slate-300 rounded p-2 text-sm w-48" onchange="initDigitalTwin()"></select>
-                    </div>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-12 gap-6 flex-grow">
-                <div class="col-span-3 bg-white border border-slate-200 rounded-xl p-5 shadow-sm overflow-y-auto h-full">
-                    <h3 class="font-bold text-slate-700 border-b border-slate-100 pb-2 mb-4">Parameters</h3>
-                    
-                    <div class="dt-control-group">
-                        <div class="text-xs font-bold text-blue-600 mb-2">STATION 1: CARDING</div>
-                        <span class="dt-label">Avg Cycle Time (sec/yd) <span id="v_ct1" class="dt-val">--</span></span>
-                        <input type="range" min="1.0" max="30.0" step="0.1" class="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer" oninput="updateDTParam(0, 'mean', this.value)" id="i_ct1">
-                        <span class="dt-label mt-2">Variance (Sigma) <span id="v_sig1" class="dt-val">0.5</span></span>
-                        <input type="range" min="0.0" max="5.0" step="0.1" value="0.5" class="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer" oninput="updateDTParam(0, 'sigma', this.value)">
-                    </div>
-
-                    <div class="dt-control-group">
-                        <div class="text-xs font-bold text-purple-600 mb-2">STATION 2: FINISHING</div>
-                        <span class="dt-label">Avg Cycle Time (sec/yd) <span id="v_ct2" class="dt-val">--</span></span>
-                        <input type="range" min="1.0" max="30.0" step="0.1" class="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer" oninput="updateDTParam(1, 'mean', this.value)" id="i_ct2">
-                        <span class="dt-label mt-2">Variance (Sigma) <span id="v_sig2" class="dt-val">1.5</span></span>
-                        <input type="range" min="0.0" max="5.0" step="0.1" value="1.5" class="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer" oninput="updateDTParam(1, 'sigma', this.value)">
-                    </div>
-
-                    <div class="dt-control-group">
-                        <div class="text-xs font-bold text-orange-600 mb-2">STATION 3: QC</div>
-                        <span class="dt-label">Avg Cycle Time (sec/yd) <span id="v_ct3" class="dt-val">--</span></span>
-                        <input type="range" min="1.0" max="30.0" step="0.1" class="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer" oninput="updateDTParam(2, 'mean', this.value)" id="i_ct3">
-                        <span class="dt-label mt-2">Variance (Sigma) <span id="v_sig3" class="dt-val">0.2</span></span>
-                        <input type="range" min="0.0" max="5.0" step="0.1" value="0.2" class="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer" oninput="updateDTParam(2, 'sigma', this.value)">
-                    </div>
-
-                    <div class="mt-4 flex gap-2">
-                        <button onclick="toggleSim()" id="btnToggleSim" class="flex-1 bg-blue-600 text-white font-bold py-2 rounded text-xs hover:bg-blue-700">PAUSE</button>
-                        <button onclick="resetSim()" class="flex-1 bg-slate-100 text-slate-600 font-bold py-2 rounded text-xs hover:bg-slate-200">RESET</button>
-                    </div>
-                </div>
-
-                <div class="col-span-9 flex flex-col gap-4">
-                    <div class="grid grid-cols-3 gap-4">
-                        <div class="bg-white border border-slate-200 p-4 rounded-xl shadow-sm text-center">
-                            <div class="text-xs text-slate-500 uppercase font-bold">Throughput</div>
-                            <div class="text-2xl font-bold text-slate-800" id="dispDTThroughput">0</div>
-                            <div class="text-[10px] text-slate-400">Units / Hour</div>
-                        </div>
-                        <div class="bg-white border border-slate-200 p-4 rounded-xl shadow-sm text-center">
-                            <div class="text-xs text-slate-500 uppercase font-bold">System OEE</div>
-                            <div class="text-2xl font-bold text-blue-600" id="dispDTOEE">0%</div>
-                            <div class="text-[10px] text-slate-400">Efficiency</div>
-                        </div>
-                        <div class="bg-white border border-slate-200 p-4 rounded-xl shadow-sm text-center">
-                            <div class="text-xs text-slate-500 uppercase font-bold">WIP (Buffer)</div>
-                            <div class="text-2xl font-bold text-orange-500" id="dispDTWIP">0</div>
-                            <div class="text-[10px] text-slate-400">Items Queued</div>
-                        </div>
-                    </div>
-
-                    <div class="flex-grow bg-white border border-slate-200 rounded-xl shadow-sm p-4 flex flex-col">
-                        <canvas id="simCanvas"></canvas>
-                        <div class="flex justify-between items-start mt-4 px-2">
-                            <div class="text-xs text-slate-500 flex gap-4">
-                                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-green-600"></span> Running</span>
-                                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-400"></span> Starved</span>
-                                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-500"></span> Blocked</span>
-                            </div>
-                            <div class="text-xs font-mono text-right">
-                                <div>Theoretical Max: <span id="theoMax">--</span></div>
-                                <div class="text-red-500">Starvation Loss: <span id="starveLoss">--</span></div>
-                                <div class="text-red-500">Blocking Loss: <span id="blockLoss">--</span></div>
-                            </div>
-                        </div>
-                        <div id="textInsight" class="mt-3 p-3 bg-slate-50 rounded border border-slate-100 text-xs text-slate-600 italic">
-                            Initializing analysis...
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="view-capex" class="flex-1 hidden bg-white p-8 fade-in overflow-auto">
-        <div class="max-w-6xl mx-auto">
-            <h2 class="text-2xl font-bold text-slate-800 mb-2">Retrofit Impact Modeler</h2>
-            <p class="text-sm text-slate-500 mb-8">Model ROI and Carbon impact for equipment upgrades based on current production volume.</p>
-
-            <div class="grid grid-cols-12 gap-8">
-                <div class="col-span-4 space-y-6">
-                    <div class="bg-slate-50 p-6 rounded-xl border border-slate-200">
-                        <h3 class="text-sm font-bold text-slate-700 uppercase mb-4 border-b border-slate-200 pb-2">Current State</h3>
-                        <div class="space-y-4">
-                            <div>
-                                <label class="block text-xs font-bold text-slate-500 mb-1">Annual Energy (kWh)</label>
-                                <div class="relative">
-                                    <input type="number" id="baseEnergy" class="w-full border border-slate-300 rounded p-2 text-sm pl-3 pr-8" oninput="calcCapex()">
-                                    <span class="absolute right-3 top-2 text-xs text-slate-400">kWh</span>
-                                </div>
-                                <p class="text-[10px] text-blue-500 mt-1 cursor-pointer hover:underline" onclick="estimateEnergy()">* Estimate from Schedule Output</p>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-slate-500 mb-1">Energy Cost ($/kWh)</label>
-                                <div class="relative">
-                                    <input type="number" id="energyCost" value="0.12" step="0.01" class="w-full border border-slate-300 rounded p-2 text-sm" oninput="calcCapex()">
-                                </div>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-slate-500 mb-1">Grid Carbon (kgCO2/kWh)</label>
-                                <div class="relative">
-                                    <input type="number" id="carbonIntensity" value="0.38" step="0.01" class="w-full border border-slate-300 rounded p-2 text-sm" oninput="calcCapex()">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                        <h3 class="text-sm font-bold text-slate-700 uppercase mb-4 border-b border-slate-100 pb-2">Retrofit Project</h3>
-                        <div class="space-y-4">
-                            <div>
-                                <label class="block text-xs font-bold text-slate-500 mb-1">Total CAPEX ($)</label>
-                                <input type="number" id="capexVal" value="150000" class="w-full border border-slate-300 rounded p-2 text-sm" oninput="calcCapex()">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-slate-500 mb-1">Efficiency Gain (%)</label>
-                                <input type="number" id="effGain" value="35" class="w-full border border-slate-300 rounded p-2 text-sm" oninput="calcCapex()">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-span-8 space-y-6">
-                    <div class="grid grid-cols-3 gap-4">
-                        <div class="kpi-card-retro">
-                            <div class="text-xs font-bold text-slate-400 uppercase">Annual Savings</div>
-                            <div class="text-2xl font-bold text-teal-600 mt-1" id="dispSavings">$0</div>
-                            <div class="text-xs text-slate-400 mt-1">Energy Only</div>
-                        </div>
-                        <div class="kpi-card-retro">
-                            <div class="text-xs font-bold text-slate-400 uppercase">Payback Period</div>
-                            <div class="text-2xl font-bold text-slate-700 mt-1" id="dispPayback">0.0 Yrs</div>
-                            <div class="text-xs text-slate-400 mt-1">ROI: <span id="dispROI">0%</span></div>
-                        </div>
-                        <div class="kpi-card-retro">
-                            <div class="text-xs font-bold text-slate-400 uppercase">Carbon Removed</div>
-                            <div class="text-2xl font-bold text-green-600 mt-1" id="dispCarbon">0</div>
-                            <div class="text-xs text-slate-400 mt-1">Tonnes CO2e / Year</div>
-                        </div>
-                    </div>
-
-                    <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex flex-col h-80">
-                        <h3 class="text-sm font-bold text-slate-700 mb-6">10-Year Financial Projection</h3>
-                        <div class="flex gap-12 items-end flex-1 pb-4 border-b border-slate-100 relative">
-                             <div class="bar-group-retro">
-                                <div class="text-center text-xs font-mono font-bold text-slate-700 mb-2" id="valOldCost">$0</div>
-                                <div class="bar-retro bg-slate-300" id="barOldCost" style="height: 80%;"></div>
-                                <div class="text-center text-xs text-slate-500 mt-2">Current OpEx</div>
-                            </div>
-                            <div class="bar-group-retro">
-                                <div class="text-center text-xs font-mono font-bold text-slate-700 mb-2" id="valNewCost">$0</div>
-                                <div class="bar-retro bg-teal-400" id="barNewCost" style="height: 50%;"></div>
-                                <div class="text-center text-xs text-slate-500 mt-2">Post-Retrofit OpEx</div>
-                            </div>
-                            <div class="bar-group-retro">
-                                <div class="text-center text-xs font-mono font-bold text-green-700 mb-2" id="valCumSavings">$0</div>
-                                <div class="bar-retro bg-green-500" id="barCumSavings" style="height: 90%;"></div>
-                                <div class="text-center text-xs text-slate-500 mt-2">10-Yr Net Benefit</div>
-                            </div>
-                        </div>
-                        <div id="analysisText" class="mt-4 text-xs text-teal-700 bg-teal-50 p-3 rounded border border-teal-100">
-                            Loading analysis...
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <div id="view-sequencing" class="flex-1 hidden bg-white p-8 fade-in overflow-auto">
         <div class="max-w-7xl mx-auto">
-            <h2 class="text-2xl font-bold text-slate-800 mb-6">Machine Preferences</h2>
+            <div class="flex justify-between items-end mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-800">Machine Preferences</h2>
+                    <p class="text-sm text-slate-500">Define preferred machines per Felt Code. Engine tries 1st choice, then 2nd, etc.</p>
+                </div>
+                <div class="flex gap-2 admin-only">
+                    <button onclick="document.getElementById('massSeqModal').style.display='flex'" class="px-4 py-2 bg-slate-100 border border-slate-300 text-slate-700 font-bold rounded hover:bg-white transition"><i class="fa-solid fa-layer-group mr-2"></i>Mass Edit</button>
+                    <button onclick="addNewRouteRow()" class="px-4 py-2 bg-blue-600 text-white font-bold rounded shadow hover:bg-blue-700">+ Add Rule</button>
+                </div>
+            </div>
             <div class="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
                 <table class="w-full text-sm text-left text-slate-600">
                     <thead class="bg-slate-50 text-slate-500 font-bold border-b border-slate-200">
-                        <tr><th class="p-4">Felt Code</th><th class="p-4">Carding</th><th class="p-4">Finishing</th><th class="p-4">QC</th><th class="p-4 text-center">Action</th></tr>
+                        <tr>
+                            <th class="p-4">Felt Code</th>
+                            <th class="p-4">Carding Options</th>
+                            <th class="p-4">Finishing Options</th>
+                            <th class="p-4">QC Options</th>
+                            <th class="p-4 text-center">Action</th>
+                        </tr>
                     </thead>
                     <tbody id="sequencingTableBody" class="divide-y divide-slate-100"></tbody>
                 </table>
@@ -421,13 +291,57 @@
         </div>
     </div>
 
+    <div id="view-staffing" class="flex-1 hidden bg-white p-8 fade-in overflow-auto">
+        <div class="max-w-5xl mx-auto">
+            <div class="flex justify-between items-end mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-800">Machine Staffing</h2>
+                    <p class="text-sm text-slate-500">Control availability per machine. Unchecked shifts are treated as downtime.</p>
+                </div>
+                <button onclick="runEngine()" class="admin-only px-4 py-2 bg-green-600 text-white font-bold rounded shadow hover:bg-green-700">Apply & Re-Schedule</button>
+            </div>
+            <div class="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+                <table class="w-full text-sm text-left text-slate-600">
+                    <thead class="bg-slate-50 text-slate-500 font-bold border-b border-slate-200">
+                        <tr>
+                            <th class="p-4">Specific Machine</th>
+                            <th class="p-4 text-center">Day (08:00 - 16:00)</th>
+                            <th class="p-4 text-center">Swing (16:00 - 00:00)</th>
+                            <th class="p-4 text-center">Night (00:00 - 08:00)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="staffingTableBody" class="divide-y divide-slate-100"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <div id="view-rates" class="flex-1 hidden bg-white p-8 fade-in overflow-auto">
         <div class="max-w-6xl mx-auto">
-            <h2 class="text-2xl font-bold text-slate-800 mb-6">Rates & Changeovers</h2>
+            <div class="flex justify-between items-end mb-6">
+                <h2 class="text-2xl font-bold text-slate-800">Rates & Changeovers</h2>
+                <div class="flex gap-3">
+                    <div class="bg-slate-50 p-2 rounded-lg border border-slate-200 flex items-center gap-3">
+                        <span class="text-xs font-bold text-slate-500 uppercase ml-2">Setup Penalty</span>
+                        <input type="number" id="setupPenalty" value="4" class="w-16 bg-white border border-slate-300 text-slate-700 rounded px-2 py-1 text-center font-mono text-sm" onchange="runEngine()">
+                        <span class="text-xs text-slate-500 mr-2">hours</span>
+                    </div>
+                    <div class="flex gap-3 admin-only">
+                        <button onclick="document.getElementById('massRateModal').style.display='flex'" class="px-4 py-2 bg-slate-100 border border-slate-300 text-slate-700 font-bold rounded hover:bg-white transition">Mass Update</button>
+                        <button onclick="addNewRateRow()" class="px-4 py-2 bg-blue-600 text-white font-bold rounded shadow hover:bg-blue-700">+ Add Rate</button>
+                    </div>
+                </div>
+            </div>
             <div class="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm">
                 <table class="w-full text-sm text-left text-slate-600">
                     <thead class="bg-slate-50 text-slate-500 font-bold border-b border-slate-200">
-                        <tr><th class="p-4 w-1/3">Felt Code</th><th class="p-4 text-right">Carding (yds/hr)</th><th class="p-4 text-right">Finishing (yds/hr)</th><th class="p-4 text-right">QC (yds/hr)</th></tr>
+                        <tr>
+                            <th class="p-4 w-1/3">Felt Code</th>
+                            <th class="p-4 text-right">Carding (yds/hr)</th>
+                            <th class="p-4 text-right">Finishing (yds/hr)</th>
+                            <th class="p-4 text-right">QC (yds/hr)</th>
+                            <th class="p-4 w-20 text-center">Actions</th>
+                        </tr>
                     </thead>
                     <tbody id="ratesTableBody" class="divide-y divide-slate-100"></tbody>
                 </table>
@@ -444,13 +358,19 @@
                 <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm"><div class="text-xs font-bold text-slate-400 uppercase">Late Value</div><div class="text-3xl font-bold text-red-600 mt-2" id="kpiLate">$0</div></div>
             </div>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 h-96">
-                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col"><div class="flex-grow relative"><canvas id="chartLoad"></canvas></div></div>
-                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col"><div class="flex-grow relative"><canvas id="chartRev"></canvas></div></div>
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+                    <h3 class="text-sm font-bold text-slate-600 mb-6">Machine Load Balance</h3>
+                    <div class="flex-grow relative"><canvas id="chartLoad"></canvas></div>
+                </div>
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+                    <h3 class="text-sm font-bold text-slate-600 mb-6">Revenue Forecast</h3>
+                    <div class="flex-grow relative"><canvas id="chartRev"></canvas></div>
+                </div>
             </div>
         </div>
     </div>
 
-     <div id="view-downtime" class="flex-1 hidden bg-white p-8 fade-in overflow-auto">
+    <div id="view-downtime" class="flex-1 hidden bg-white p-8 fade-in overflow-auto">
          <div class="max-w-4xl mx-auto">
             <h2 class="text-2xl font-bold text-slate-800 mb-6">Planned Downtime</h2>
             <div class="bg-white p-6 rounded-xl border border-slate-200 mb-8 shadow-sm grid grid-cols-1 md:grid-cols-4 gap-4 items-end admin-only">
@@ -470,17 +390,20 @@
     <div class="modal-content">
         <h2 class="text-xl font-bold mb-6 text-slate-800 border-b border-slate-200 pb-2">Import Data</h2>
         <div class="space-y-4">
-            <div class="border border-dashed border-slate-300 rounded-lg p-6 hover:bg-slate-50 relative text-center">
+            <div class="border border-dashed border-slate-300 rounded-lg p-6 hover:bg-slate-50 transition cursor-pointer relative text-center group">
+                <i class="fa-solid fa-microchip text-2xl text-blue-500 mb-2"></i>
                 <div class="font-bold text-slate-700">1. Load Rates</div>
                 <div class="text-xs text-slate-500" id="rateStatus">Rates.xlsx</div>
                 <input type="file" class="absolute inset-0 opacity-0 cursor-pointer" onchange="handleRateUpload(this)">
             </div>
-            <div class="border border-dashed border-slate-300 rounded-lg p-6 hover:bg-slate-50 relative text-center">
+            <div class="border border-dashed border-slate-300 rounded-lg p-6 hover:bg-slate-50 transition cursor-pointer relative text-center group">
+                <i class="fa-solid fa-file-csv text-2xl text-green-500 mb-2"></i>
                 <div class="font-bold text-slate-700">2. Load Orders</div>
                 <div class="text-xs text-slate-500" id="orderStatus">Open Orders.xlsx</div>
                 <input type="file" class="absolute inset-0 opacity-0 cursor-pointer" onchange="handleOrderUpload(this)">
             </div>
-            <div class="border border-dashed border-slate-300 rounded-lg p-6 hover:bg-slate-50 relative text-center">
+            <div class="border border-dashed border-slate-300 rounded-lg p-6 hover:bg-slate-50 transition cursor-pointer relative text-center group">
+                <i class="fa-solid fa-route text-2xl text-purple-500 mb-2"></i>
                 <div class="font-bold text-slate-700">3. Load Digital Schedule</div>
                 <div class="text-xs text-slate-500" id="routeStatus">Digital Schedule.xlsx</div>
                 <input type="file" class="absolute inset-0 opacity-0 cursor-pointer" onchange="handleRouteUpload(this)">
@@ -497,20 +420,103 @@
     <div class="modal-content w-[500px]">
         <h2 class="text-lg font-bold text-slate-800 mb-4">Edit Order <span id="editOrderId" class="text-blue-600"></span></h2>
         <div class="grid grid-cols-2 gap-4 mb-4">
-            <div><label class="block text-xs font-bold text-slate-500 uppercase mb-1">Balance</label><input type="number" id="editQty" class="w-full bg-white border border-slate-300 rounded p-2 text-sm"></div>
-            <div><label class="block text-xs font-bold text-slate-500 uppercase mb-1">Felt</label><input type="text" id="editFelt" class="w-full bg-gray-100 border border-slate-300 rounded p-2 text-sm" readonly></div>
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Balance (Qty)</label>
+                <input type="number" id="editQty" class="w-full bg-white border border-slate-300 text-slate-800 rounded p-2 text-sm">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Felt Code</label>
+                <input type="text" id="editFelt" class="w-full bg-gray-100 border border-slate-300 text-slate-600 rounded p-2 text-sm" readonly>
+            </div>
         </div>
+        
         <div class="border-t border-slate-200 pt-4 mb-4">
-            <h3 class="text-xs font-bold text-slate-800 mb-2 uppercase">Force Override</h3>
+            <h3 class="text-xs font-bold text-slate-800 mb-2 uppercase">Force Specific Machines (Override Logic)</h3>
             <div class="grid grid-cols-3 gap-3">
-                <select id="forceCard" class="w-full bg-white border border-slate-300 rounded p-2 text-xs"><option value="">Auto</option></select>
-                <select id="forceFin" class="w-full bg-white border border-slate-300 rounded p-2 text-xs"><option value="">Auto</option></select>
-                <select id="forceQC" class="w-full bg-white border border-slate-300 rounded p-2 text-xs"><option value="">Auto</option></select>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 mb-1">Carding</label>
+                    <select id="forceCard" class="w-full bg-white border border-slate-300 text-slate-800 rounded p-2 text-xs">
+                        <option value="">Auto (Engine)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 mb-1">Finishing</label>
+                    <select id="forceFin" class="w-full bg-white border border-slate-300 text-slate-800 rounded p-2 text-xs">
+                        <option value="">Auto (Engine)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 mb-1">QC</label>
+                    <select id="forceQC" class="w-full bg-white border border-slate-300 text-slate-800 rounded p-2 text-xs">
+                        <option value="">Auto (Engine)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-6 flex justify-end gap-3">
+            <button onclick="document.getElementById('editOrderModal').style.display='none'" class="px-4 py-2 text-slate-500 font-bold text-sm">Cancel</button>
+            <button onclick="saveOrderEdit()" class="admin-only px-4 py-2 bg-blue-600 text-white font-bold rounded shadow hover:bg-blue-700">Save & Re-Run</button>
+        </div>
+    </div>
+</div>
+
+<div id="editRateModal" class="modal-bg">
+    <div class="modal-content w-[400px]">
+        <h2 class="text-lg font-bold text-slate-800 mb-4">Edit Rate: <span id="editRateFelt" class="text-blue-600"></span></h2>
+        <div class="grid grid-cols-3 gap-3 mb-4">
+            <div><label class="text-[10px] font-bold text-slate-500">Card</label><input type="number" id="editRateCard" class="w-full border rounded p-2 text-sm"></div>
+            <div><label class="text-[10px] font-bold text-slate-500">Finishing</label><input type="number" id="editRateFin" class="w-full border rounded p-2 text-sm"></div>
+            <div><label class="text-[10px] font-bold text-slate-500">QC</label><input type="number" id="editRateQC" class="w-full border rounded p-2 text-sm"></div>
+        </div>
+        <div class="flex justify-end gap-3">
+            <button onclick="document.getElementById('editRateModal').style.display='none'" class="px-4 py-2 text-slate-500 text-sm font-bold">Cancel</button>
+            <button onclick="saveRateEdit()" class="admin-only px-4 py-2 bg-blue-600 text-white text-sm font-bold rounded">Save</button>
+        </div>
+    </div>
+</div>
+
+<div id="massSeqModal" class="modal-bg">
+    <div class="modal-content w-[400px]">
+        <h2 class="text-lg font-bold text-slate-800 mb-4">Mass Update Preferences</h2>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Felt Code Contains</label>
+                <input type="text" id="massSeqFilter" class="w-full bg-white border border-slate-300 rounded p-2 text-sm" placeholder="e.g. AX-14">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Set Preferred Card</label>
+                <select id="massSeqCard" class="w-full bg-white border border-slate-300 rounded p-2 text-sm"><option value="">No Change</option></select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Set Preferred Finishing</label>
+                <select id="massSeqFin" class="w-full bg-white border border-slate-300 rounded p-2 text-sm"><option value="">No Change</option></select>
             </div>
         </div>
         <div class="mt-6 flex justify-end gap-3">
-            <button onclick="document.getElementById('editOrderModal').style.display='none'" class="px-4 py-2 text-slate-500 font-bold text-sm">Cancel</button>
-            <button onclick="saveOrderEdit()" class="admin-only px-4 py-2 bg-blue-600 text-white font-bold rounded shadow">Save</button>
+            <button onclick="document.getElementById('massSeqModal').style.display='none'" class="px-4 py-2 text-slate-500 font-bold text-sm">Cancel</button>
+            <button onclick="applyMassSeq()" class="admin-only px-4 py-2 bg-blue-600 text-white font-bold rounded">Apply</button>
+        </div>
+    </div>
+</div>
+
+<div id="massRateModal" class="modal-bg">
+    <div class="modal-content w-[400px]">
+        <h2 class="text-lg font-bold text-slate-800 mb-4">Mass Update Rates</h2>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Felt Code Contains</label>
+                <input type="text" id="massRateFilter" class="w-full bg-white border border-slate-300 rounded p-2 text-sm" placeholder="e.g. AX-14">
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+                <div><label class="text-[10px]">Card Rate</label><input type="number" id="massRateCard" class="w-full border rounded p-1"></div>
+                <div><label class="text-[10px]">Fin Rate</label><input type="number" id="massRateFin" class="w-full border rounded p-1"></div>
+                <div><label class="text-[10px]">QC Rate</label><input type="number" id="massRateQC" class="w-full border rounded p-1"></div>
+            </div>
+        </div>
+        <div class="mt-6 flex justify-end gap-3">
+            <button onclick="document.getElementById('massRateModal').style.display='none'" class="px-4 py-2 text-slate-500 font-bold text-sm">Cancel</button>
+            <button onclick="applyMassRate()" class="admin-only px-4 py-2 bg-blue-600 text-white font-bold rounded">Apply</button>
         </div>
     </div>
 </div>
@@ -578,17 +584,20 @@
                 if(overrides[ord.id].qc) prefs.qc = [overrides[ord.id].qc];
             }
 
-            // SMART ALLOCATION: Score machines based on fit
+            // STANDARD FLOW: Card -> Finish -> QC
+            // For each stage, we pick the BEST machine from the prefs list (Greedy)
+            // "Best" = Earliest Available + Setup Penalty
+            
             // --- STEP 1: CARDING ---
-            let cRes = allocateSmart(prefs.card, now, (ord.qty / (r.card||250)), ord.felt);
+            let cRes = allocate(prefs.card, now, (ord.qty / (r.card||250)), ord.felt);
             
             // --- STEP 2: FINISHING ---
             let fReady = cRes.end + 3600000; // 1hr move
-            let fRes = allocateSmart(prefs.fin, fReady, (ord.qty / (r.finish||700)), ord.felt);
+            let fRes = allocate(prefs.fin, fReady, (ord.qty / (r.finish||700)), ord.felt);
 
             // --- STEP 3: QC ---
             let qReady = fRes.end + 1800000; // 30m move
-            let qRes = allocateSmart(prefs.qc, qReady, (ord.qty / (r.qc||400)), ord.felt);
+            let qRes = allocate(prefs.qc, qReady, (ord.qty / (r.qc||400)), ord.felt);
 
             schedule.push({
                 ...ord,
@@ -599,23 +608,21 @@
             });
         });
 
-        // Helper: Scored Allocation (Look-Ahead Logic)
-        function allocateSmart(pool, readyTime, durHrs, felt) {
+        // Helper: Greedy Allocation
+        function allocate(pool, readyTime, durHrs, felt) {
             if(!pool || pool.length === 0) return { mach:'Err', start:readyTime, end:readyTime };
             
             const durMs = durHrs * 3600000;
-            let candidates = [];
+            let bestM = null;
+            let bestFinish = Infinity;
+            let bestStart = Infinity;
 
             pool.forEach(mName => {
                 const mState = machineState[mName] || { time: now, lastFelt: null };
                 let start = Math.max(mState.time, readyTime);
-                let hasSetup = false;
                 
-                // Setup Penalty Logic
-                if(mState.lastFelt && mState.lastFelt !== felt) {
-                    start += (config.setupPenalty * 3600000);
-                    hasSetup = true;
-                }
+                // Setup Penalty
+                if(mState.lastFelt && mState.lastFelt !== felt) start += (config.setupPenalty * 3600000);
 
                 // Downtime Check
                 let conflict = true;
@@ -631,42 +638,19 @@
                     attempts++;
                 }
 
-                candidates.push({
-                    mach: mName,
-                    start: start,
-                    end: start + durMs,
-                    hasSetup: hasSetup
-                });
+                const end = start + durMs;
+                if(end < bestFinish) {
+                    bestFinish = end;
+                    bestStart = start;
+                    bestM = mName;
+                }
             });
 
-            // SCORING: 
-            // 1. Prefer machines that are ALREADY SET UP for this felt (avoid changeover), 
-            //    unless the delay is huge (> 4 hours).
-            // 2. Otherwise pick earliest finish.
-            
-            candidates.sort((a,b) => {
-                const delayA = a.end;
-                const delayB = b.end;
-                
-                // If A has setup and B doesn't, favor B heavily unless B is way later
-                if (a.hasSetup && !b.hasSetup) {
-                    // If B is available within 4 hours of A, take B (avoid setup)
-                    if (delayB < delayA + 14400000) return 1; 
-                }
-                if (!a.hasSetup && b.hasSetup) {
-                    if (delayA < delayB + 14400000) return -1;
-                }
-
-                return delayA - delayB;
-            });
-
-            const best = candidates[0];
-
-            if(best) {
-                if(!machineState[best.mach]) machineState[best.mach] = { time: now, lastFelt: null };
-                machineState[best.mach].time = best.end;
-                machineState[best.mach].lastFelt = felt;
-                return { mach: best.mach, start: best.start, end: best.end };
+            if(bestM) {
+                if(!machineState[bestM]) machineState[bestM] = { time: now, lastFelt: null };
+                machineState[bestM].time = bestFinish;
+                machineState[bestM].lastFelt = felt;
+                return { mach: bestM, start: bestStart, end: bestFinish };
             }
             return { mach:'Err', start:readyTime, end:readyTime+durMs };
         }
@@ -688,340 +672,197 @@
 </script>
 
 <script>
-    // --- APP STATE & CONFIG ---
+    // --- SUPABASE CONNECTIVITY ---
     const SB_URL = 'https://tihzqfpyfanohnazvkcx.supabase.co';
     const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpaHpxZnB5ZmFub2huYXp2a2N4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ2NzY5MDAsImV4cCI6MjA4MDI1MjkwMH0.-ZbsX_CDTpNG3FRfH2KZcJjoj61z6JfHWQ7_cWyXAv0';
     const sb = supabase.createClient(SB_URL, SB_KEY);
 
+    // --- CONFIG & STATE ---
     const CONFIG = {
-        machines: ['Card 1','Card 2','Card 3','Card 4','Card 5','Card 6','Card 7','Card 8','Card 9',
-                   'Bruckner 1','Bruckner 2','Kusters','Singer 1','Singer 2','Perkins','Hunter','Dilo',
-                   'Fehrer 228', 'Heatset', 'Needleloom', // Added missing machines from v5.2 config
-                   'QC 1','QC 2','QC 3','QC 4','QC 5','QC 6','QC 7','QC 8','QC Lab'], // Restored full list
-        setupPenalty: 4, campaign: true
+        machines: [
+            'Card 1', 'Card 2', 'Card 3', 'Card 4', 'Card 5', 'Card 6', 'Card 7', 'Card 8', 'Card 9',
+            'Bruckner 1', 'Bruckner 2', 'Kusters', 'Singer 1', 'Singer 2', 
+            'Perkins', 'Hunter', 'Dilo', 'Fehrer 228', 'Heatset', 'Needleloom',
+            'QC 1', 'QC 2', 'QC 3', 'QC 4', 'QC 5', 'QC 6', 'QC 7', 'QC 8', 'QC Lab'
+        ],
+        defaults: { card: 250, finish: 700, qc: 400 },
+        setupPenalty: 4,
+        campaign: true
     };
 
-    let RATES={}; let RAW_ORDERS=[]; let ROUTES={}; let OVERRIDES={}; let DOWNTIME=[]; let SCHEDULE=[]; let STAFFING={};
-    let WORKER=null; let CHART_LOAD=null; let CHART_REV=null; let ZOOM_PX=60; let USER_ROLE='viewer';
+    let RATES = {};
+    let DOWNTIME = [];
+    let ROUTES = {}; 
+    let STAFFING = {}; 
+    let OVERRIDES = {}; 
+    
+    let RAW_ORDERS = [];
+    let SCHEDULE = [];
+    let DAY_LOADS = {};
+    let WORKER = null;
+    let ZOOM_PX = 60;
+    let CHARTS = {};
+    let USER_ROLE = 'viewer';
 
-    // --- MAIN INIT ---
+    // --- AUTHENTICATION & APP INIT ---
     async function handleLogin() {
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
         const { data, error } = await sb.auth.signInWithPassword({ email, password });
-        if(error) document.getElementById('loginError').innerText = error.message;
-        else initApp(data.user);
+        if (error) {
+            document.getElementById('loginError').innerText = error.message;
+            document.getElementById('loginError').classList.remove('hidden');
+        } else {
+            initApp(data.user);
+        }
     }
-    
+
+    async function handleLogout() {
+        await sb.auth.signOut();
+        window.location.reload();
+    }
+
     async function initApp(user) {
         document.getElementById('loginScreen').classList.add('hidden');
         document.getElementById('mainApp').classList.remove('hidden');
         document.getElementById('userEmailDisplay').innerText = user.email;
-        if(user.email.includes('admin')) USER_ROLE='admin';
-        document.getElementById('userRoleBadge').innerText = USER_ROLE.toUpperCase();
-        if(USER_ROLE==='admin') document.body.classList.add('is-admin');
-        
-        document.getElementById('simDate').valueAsDate = new Date();
-        // Init Staffing Default
-        CONFIG.machines.forEach(m => STAFFING[m] = [true, true, true]);
-        
-        initWorker();
-        initDigitalTwinCanvas();
-        populateDropdowns();
-        try {
-            const {data:rt} = await sb.from('rates').select('*');
-            if(rt) rt.forEach(r => RATES[r.felt_code] = {card:r.card_rate, finish:r.finish_rate, qc:r.qc_rate});
-        } catch(e) {}
-    }
 
-    function populateDropdowns() {
-        ['dtMachine','forceCard','forceFin','forceQC'].forEach(id => {
-            const el = document.getElementById(id); if(!el) return;
-            CONFIG.machines.forEach(m => el.innerHTML += `<option value="${m}">${m}</option>`);
+        // Fetch User Role
+        try {
+            const { data, error } = await sb.from('user_roles').select('role').eq('id', user.id).single();
+            if (data && data.role) USER_ROLE = data.role;
+        } catch (e) {
+            console.log('Role fetch failed, defaulting to viewer');
+        }
+        
+        // Manual fallback for specific email if table is missing
+        if(user.email.includes('admin') || user.email === 'admin@alkegen.com') USER_ROLE = 'admin';
+
+        // Apply Role UI
+        document.getElementById('userRoleBadge').innerText = USER_ROLE.charAt(0).toUpperCase() + USER_ROLE.slice(1);
+        if (USER_ROLE === 'admin') {
+            document.body.classList.add('is-admin');
+        }
+
+        // Init App Data
+        document.getElementById('simDate').valueAsDate = new Date();
+        CONFIG.machines.forEach(m => STAFFING[m] = [true, true, true]);
+        initWorker();
+        initUI();
+        renderStaffingTable();
+        
+        // Try fetch existing rates/downtime from DB
+        loadFromDB();
+
+        // FIXED SCROLL SYNC
+        const mainScroll = document.getElementById('mainScroll');
+        const headerScroll = document.getElementById('timelineHeaderWrapper');
+
+        mainScroll.addEventListener('scroll', () => {
+            if(headerScroll) {
+                headerScroll.scrollLeft = mainScroll.scrollLeft;
+            }
         });
     }
+
+    async function loadFromDB() {
+        try {
+            // Load downtime
+            const { data: dt } = await sb.from('downtime').select('*');
+            if(dt) {
+                DOWNTIME = dt.map(d => ({
+                    id: d.id, machine: d.machine, start: new Date(d.start_time).getTime(), end: new Date(d.end_time).getTime(), reason: d.reason
+                }));
+                renderDowntimeTable();
+            }
+            // Load rates
+            const { data: rt } = await sb.from('rates').select('*');
+            if(rt) {
+                rt.forEach(r => {
+                    RATES[r.felt_code] = { card: r.card_rate, finish: r.finish_rate, qc: r.qc_rate };
+                });
+                renderRatesTable();
+            }
+        } catch(e) { console.log('DB load skipped'); }
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        // Check active session
+        const { data: { session } } = await sb.auth.getSession();
+        if (session) {
+            initApp(session.user);
+        }
+        // Populate dropdowns regardless
+        populateDropdowns();
+    });
 
     function initWorker() {
         const blob = new Blob([document.getElementById('worker-script').textContent], {type: "text/javascript"});
         WORKER = new Worker(window.URL.createObjectURL(blob));
         WORKER.onmessage = (e) => {
             SCHEDULE = e.data.schedule;
-            renderGantt(e.data.dayLoads);
+            DAY_LOADS = e.data.dayLoads;
+            renderAll();
             renderKPIs();
-            updateFeltDropdown(); // for Twin
             document.getElementById('engineStatus').innerText = "ONLINE";
+            document.getElementById('engineStatus').className = "text-green-600 font-bold";
+            document.getElementById('uploadModal').style.display = 'none';
         };
     }
 
-    function runEngine() {
-        if(!RAW_ORDERS.length) return;
-        document.getElementById('engineStatus').innerText = "SOLVING...";
-        const simStart = document.getElementById('simDate').valueAsDate ? document.getElementById('simDate').valueAsDate.getTime() : new Date().setHours(8,0,0,0);
-        
-        // v5.2 Logic required filtering orders first
-        const activeOrders = RAW_ORDERS.filter(o => !String(o.status).toUpperCase().includes('SHIPPED') && o.rtsDate >= simStart);
+    function initUI() { populateDropdowns(); }
 
-        WORKER.postMessage({ 
-            orders:activeOrders, 
-            rates:RATES, 
-            config:CONFIG, 
-            downtime:DOWNTIME, 
-            simStart:simStart, 
-            routes:ROUTES, 
-            staffing:STAFFING, // Critical: pass staffing back in
-            overrides:OVERRIDES 
+    function populateDropdowns() {
+        ['dtMachine', 'massSeqCard', 'massSeqFin', 'forceCard', 'forceFin', 'forceQC'].forEach(id => {
+            const sel = document.getElementById(id);
+            if(!sel) return;
+            const isFilter = id.includes('massSeq') || id.includes('force');
+            if(isFilter) {
+                if(id.includes('Card')) CONFIG.machines.filter(m=>m.includes('Card')).forEach(m => sel.innerHTML += `<option value="${m}">${m}</option>`);
+                else if(id.includes('Fin')) CONFIG.machines.filter(m=>!m.includes('Card') && !m.includes('QC')).forEach(m => sel.innerHTML += `<option value="${m}">${m}</option>`);
+                else if(id.includes('QC')) CONFIG.machines.filter(m=>m.includes('QC')).forEach(m => sel.innerHTML += `<option value="${m}">${m}</option>`);
+                else CONFIG.machines.forEach(m => sel.innerHTML += `<option value="${m}">${m}</option>`);
+            } else {
+                CONFIG.machines.forEach(m => sel.innerHTML += `<option value="${m}">${m}</option>`);
+            }
         });
     }
 
-    // --- GANTT & KPI RENDERING (Condensed) ---
-    function renderGantt(dayLoads) {
-        const tbody = document.getElementById('taskTableBody'); tbody.innerHTML='';
-        const tlHead = document.getElementById('timelineHeader'); tlHead.innerHTML='';
-        const tlBody = document.getElementById('timelineBody'); tlBody.innerHTML='';
-        if(!SCHEDULE.length) return;
-        
-        const now = document.getElementById('simDate').valueAsDate.getTime();
-        const maxEnd = Math.max(...SCHEDULE.map(d=>d.globalEnd));
-        const totalDays = Math.ceil((maxEnd-now)/86400000)+5;
-        const width = totalDays * ZOOM_PX;
-        document.getElementById('timelineHeaderWrapper').firstChild.style.width = width+'px';
-
-        for(let i=0; i<totalDays; i++) {
-            const d = new Date(now + i*86400000);
-            const load = dayLoads[Math.floor(d.getTime()/86400000)] || 0;
-            const bg = load > 150 ? 'bg-red-400' : (load > 50 ? 'bg-amber-300' : 'bg-green-400');
-            tlHead.innerHTML += `<div class="day-col" style="width:${ZOOM_PX}px"><span class="mt-2 font-bold">${d.getDate()}</span><div class="absolute bottom-0 w-full h-1 ${bg} opacity-50"></div></div>`;
-        }
-
-        SCHEDULE.forEach(r => {
-            tbody.innerHTML += `<tr><td><span class="inline-block w-2 h-2 rounded-full mr-2 ${r.isLate?'bg-red-500':'bg-green-500'}"></span>${r.status||'New'}</td><td class="font-mono text-xs hover:text-blue-600 cursor-pointer" onclick="openEdit('${r.id}')">${r.id}</td><td class="font-bold text-blue-600 text-xs">${r.felt}</td><td class="text-[10px] text-slate-500">${r.card.mach}</td><td class="text-[10px] text-slate-500">${r.fin.mach}</td><td class="text-right text-xs font-mono">${r.qty}</td></tr>`;
-            
-            const rowDiv = document.createElement('div'); rowDiv.className='chart-row'; rowDiv.style.width=width+'px';
-            [r.card, r.fin, r.qc].forEach((t, i) => {
-                if(t.mach==='Err') return;
-                const left = ((t.start-now)/86400000)*ZOOM_PX;
-                const w = Math.max(((t.end-t.start)/86400000)*ZOOM_PX, 2);
-                const cls = i===0?'bar-card':(i===1?'bar-fin':'bar-qc');
-                rowDiv.innerHTML += `<div class="bar ${cls}" style="left:${left}px; width:${w}px">${t.mach}</div>`;
-            });
-            tlBody.appendChild(rowDiv);
+    // --- DATA LOADING ---
+    function readFile(file) {
+        return new Promise(resolve => {
+            const reader = new FileReader();
+            reader.onload = e => resolve(XLSX.read(new Uint8Array(e.target.result), {type: 'array'}));
+            reader.readAsArrayBuffer(file);
         });
     }
 
-    function renderKPIs() {
-        const totYds = SCHEDULE.reduce((a,b)=>a+b.qty,0);
-        const totRev = SCHEDULE.reduce((a,b)=>a+b.val,0);
-        document.getElementById('kpiYds').innerText = totYds.toLocaleString();
-        document.getElementById('kpiRev').innerText = '$'+(totRev/1e6).toFixed(2)+'M';
-        
-        // Charts (Simplified)
-        if(CHART_LOAD) CHART_LOAD.destroy();
-        const machLoad={}; SCHEDULE.forEach(r=>[r.card,r.fin,r.qc].forEach(t=>machLoad[t.mach]=(machLoad[t.mach]||0)+r.qty));
-        CHART_LOAD = new Chart(document.getElementById('chartLoad'), {
-            type: 'bar', data: { labels:Object.keys(machLoad), datasets:[{label:'Yards', data:Object.values(machLoad), backgroundColor:'#3b82f6'}] }, options:{maintainAspectRatio:false}
-        });
-    }
-
-    // --- DIGITAL TWIN LOGIC ---
-    let simCtx, simParticles=[], simRunning=false, lastTime=0, STATIONS=[];
-    let BUFFERS=[Infinity, 5, Infinity]; // Feed, WIP, Out
-
-    function initDigitalTwinCanvas() {
-        const c = document.getElementById('simCanvas');
-        c.width = c.offsetWidth; c.height = c.offsetHeight;
-        simCtx = c.getContext('2d');
-    }
-
-    function updateFeltDropdown() {
-        const s = document.getElementById('dtFeltSelect');
-        if(s.options.length > 1) return; // already populated
-        const uniqueFelts = [...new Set(SCHEDULE.map(s => s.felt))];
-        uniqueFelts.forEach(f => s.innerHTML += `<option value="${f}">${f}</option>`);
-    }
-
-    function initDigitalTwin() {
-        const felt = document.getElementById('dtFeltSelect').value;
-        const r = RATES[felt] || {card:250, finish:700, qc:400};
-        
-        // Convert Rate (yds/hr) to Cycle Time (sec/yd)
-        // CT = 3600 / Rate
-        const ct1 = (3600 / r.card).toFixed(1);
-        const ct2 = (3600 / r.finish).toFixed(1);
-        const ct3 = (3600 / r.qc).toFixed(1);
-
-        document.getElementById('v_ct1').innerText = ct1; document.getElementById('i_ct1').value = ct1;
-        document.getElementById('v_ct2').innerText = ct2; document.getElementById('i_ct2').value = ct2;
-        document.getElementById('v_ct3').innerText = ct3; document.getElementById('i_ct3').value = ct3;
-
-        STATIONS = [
-            { id:0, name:"Carding", mean:parseFloat(ct1), sigma:0.5, state:'idle', timer:0, items:0, starveT:0, blockT:0 },
-            { id:1, name:"Finishing", mean:parseFloat(ct2), sigma:1.5, state:'idle', timer:0, items:0, starveT:0, blockT:0 },
-            { id:2, name:"QC", mean:parseFloat(ct3), sigma:0.2, state:'idle', timer:0, items:0, starveT:0, blockT:0 }
-        ];
-        
-        simParticles=[]; BUFFERS=[Infinity, 0, 0]; simRunning=true; lastTime=0;
-        document.getElementById('btnToggleSim').innerText = "PAUSE";
-        requestAnimationFrame(simLoop);
-    }
-
-    function updateDTParam(idx, type, val) {
-        val = parseFloat(val);
-        STATIONS[idx][type] = val;
-        if(type==='mean') document.getElementById(`v_ct${idx+1}`).innerText = val.toFixed(1);
-        if(type==='sigma') document.getElementById(`v_sig${idx+1}`).innerText = val.toFixed(1);
-    }
-
-    function getGaussian(mean, sigma) {
-        let u=0, v=0; while(u===0) u=Math.random(); while(v===0) v=Math.random();
-        return Math.max(0.1, (Math.sqrt(-2.0*Math.log(u))*Math.cos(2.0*Math.PI*v))*sigma + mean);
-    }
-
-    function simLoop(ts) {
-        if(!simRunning) return;
-        const dt = (ts - lastTime)/1000; lastTime = ts;
-        if(dt > 0.1) { requestAnimationFrame(simLoop); return; }
-        const step = dt * 5; // 5x speed
-
-        // S1 (Card)
-        let s1 = STATIONS[0];
-        if(s1.state==='idle') { s1.state='working'; s1.timer=getGaussian(s1.mean, s1.sigma); }
-        else if(s1.state==='working') {
-            s1.timer-=step;
-            if(s1.timer<=0) { BUFFERS[1]++; s1.items++; spawnParticle(0); s1.state='idle'; }
-        }
-
-        // S2 (Finish) - Pulls from Buf1
-        let s2 = STATIONS[1];
-        if(s2.state==='idle') {
-            if(BUFFERS[1]>0) { BUFFERS[1]--; s2.state='working'; s2.timer=getGaussian(s2.mean, s2.sigma); }
-            else { s2.state='starved'; s2.starveT+=step; }
-        } else if(s2.state==='working') {
-            s2.timer-=step;
-            if(s2.timer<=0) { s2.items++; spawnParticle(1); s2.state='idle'; } // Assuming infinite out for S2->S3 link simplification
-        } else if(s2.state==='starved' && BUFFERS[1]>0) s2.state='idle';
-
-        // S3 (QC) - Simplified for demo to follow S2
-        let s3 = STATIONS[2];
-        // For visual simplicity, let's just make S3 independent consumer to show rate diff
-        if(s3.state==='idle') { s3.state='working'; s3.timer=getGaussian(s3.mean, s3.sigma); }
-        else if(s3.state==='working') { s3.timer-=step; if(s3.timer<=0) { s3.items++; spawnParticle(2); s3.state='idle'; } }
-
-        drawSim();
-        requestAnimationFrame(simLoop);
-    }
-
-    function spawnParticle(idx) { simParticles.push({x:100+(idx*200), y:150, life:1}); }
-
-    function drawSim() {
-        const w = simCtx.canvas.width; const h = simCtx.canvas.height;
-        simCtx.clearRect(0,0,w,h);
-        
-        // Draw Stations
-        STATIONS.forEach((s, i) => {
-            const x = 100 + (i*200); const y = 150;
-            simCtx.fillStyle = s.state==='working' ? '#16a34a' : (s.state==='starved'?'#facc15':'#ef4444');
-            simCtx.fillRect(x-30, y-30, 60, 60);
-            simCtx.fillStyle='#1e293b'; simCtx.font='bold 12px Arial'; simCtx.fillText(s.name, x-20, y+45);
-            simCtx.font='10px monospace'; simCtx.fillText(s.state.toUpperCase(), x-20, y-40);
-        });
-
-        // Draw Buffer 1
-        simCtx.strokeStyle='#64748b'; simCtx.strokeRect(270, 120, 60, 60);
-        simCtx.fillStyle='rgba(37,99,235,0.2)';
-        const fill = Math.min(BUFFERS[1], 50)/50 * 60;
-        simCtx.fillRect(270, 180-fill, 60, fill);
-        simCtx.fillStyle='#000'; simCtx.fillText(`Q: ${BUFFERS[1]}`, 280, 200);
-
-        // Particles
-        simParticles.forEach(p => {
-            p.x+=4; p.life-=0.01;
-            simCtx.fillStyle=`rgba(37,99,235,${p.life})`;
-            simCtx.beginPath(); simCtx.arc(p.x, p.y, 4, 0, Math.PI*2); simCtx.fill();
-        });
-        simParticles = simParticles.filter(p=>p.life>0);
-
-        // Metrics
-        const throughput = (STATIONS[1].items / (performance.now()/1000))*3600; // rough approx
-        document.getElementById('dispDTThroughput').innerText = STATIONS[1].items;
-        document.getElementById('dispDTWIP').innerText = BUFFERS[1];
-    }
-    
-    function toggleSim() { simRunning=!simRunning; document.getElementById('btnToggleSim').innerText = simRunning?"PAUSE":"RESUME"; if(simRunning) requestAnimationFrame(simLoop); }
-    function resetSim() { initDigitalTwin(); }
-
-    // --- CAPEX LOGIC ---
-    function estimateEnergy() {
-        const totYds = SCHEDULE.reduce((a,b)=>a+b.qty,0);
-        // Rough heuristic: 0.5 kWh per yard processed
-        const est = (totYds * 0.5).toFixed(0);
-        document.getElementById('baseEnergy').value = est;
-        calcCapex();
-    }
-
-    function calcCapex() {
-        const energy = parseFloat(document.getElementById('baseEnergy').value)||0;
-        const cost = parseFloat(document.getElementById('energyCost').value)||0;
-        const carbon = parseFloat(document.getElementById('carbonIntensity').value)||0;
-        const capex = parseFloat(document.getElementById('capexVal').value)||0;
-        const eff = parseFloat(document.getElementById('effGain').value)||0;
-
-        const oldOpEx = energy * cost;
-        const newEnergy = energy * (1 - eff/100);
-        const newOpEx = newEnergy * cost;
-        const savings = oldOpEx - newOpEx;
-        
-        const payback = savings > 0 ? capex/savings : 0;
-        const roi = savings > 0 ? (savings/capex)*100 : 0;
-        const co2Saved = ((energy - newEnergy)*carbon)/1000;
-
-        document.getElementById('dispSavings').innerText = '$' + savings.toLocaleString(undefined,{maximumFractionDigits:0});
-        document.getElementById('dispPayback').innerText = payback.toFixed(1) + " Yrs";
-        document.getElementById('dispROI').innerText = roi.toFixed(1) + "%";
-        document.getElementById('dispCarbon').innerText = co2Saved.toFixed(1);
-
-        // Bars
-        const max = Math.max(oldOpEx, savings*10);
-        document.getElementById('barOldCost').style.height = (oldOpEx/max*100)+'%';
-        document.getElementById('valOldCost').innerText = '$'+(oldOpEx/1000).toFixed(0)+'k';
-        
-        document.getElementById('barNewCost').style.height = (newOpEx/max*100)+'%';
-        document.getElementById('valNewCost').innerText = '$'+(newOpEx/1000).toFixed(0)+'k';
-
-        const net10y = (savings*10) - capex;
-        document.getElementById('barCumSavings').style.height = (net10y/max*100)+'%';
-        document.getElementById('valCumSavings').innerText = '$'+(net10y/1000).toFixed(0)+'k';
-
-        document.getElementById('analysisText').innerHTML = `A <strong>$${capex.toLocaleString()}</strong> investment yielding <strong>${eff}% efficiency</strong> breaks even in <strong>${payback.toFixed(1)} years</strong>. 10-Year Net Benefit: <strong>$${net10y.toLocaleString()}</strong>.`;
-    }
-
-    // --- EXCEL & FILE HANDLING ---
-    function readFile(f) { return new Promise(r=>{const rd=new FileReader(); rd.onload=e=>r(XLSX.read(new Uint8Array(e.target.result),{type:'array'})); rd.readAsArrayBuffer(f);}); }
-    
-    async function handleOrderUpload(i) {
-        const wb=await readFile(i.files[0]); 
+    async function handleOrderUpload(inp) {
+        const wb = await readFile(inp.files[0]);
         let rows = [];
         for(const sn of wb.SheetNames) {
             const raw = XLSX.utils.sheet_to_json(wb.Sheets[sn], {header:1});
             const idx = raw.findIndex(r => r && r.some(c => String(c).toUpperCase().includes('ORDER')));
             if(idx > -1) { rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], {range:idx}); break; }
         }
-        RAW_ORDERS = rows.map((r, x)=>({
-            id: r.OrderID || r['Order ID'] || `ORD-${x}`, 
-            felt: r.Felt || r['Felt Code'] || 'UNK', 
-            qty: parseFloat(r.Qty || r['Balance'] || r['Bal Yds'] || 0), 
-            val: parseFloat(r.Val || r['Sales Value'] || 0), 
-            rtsRaw: r['RTS Date'] || r.Date || r.ReqDate,
-            status: r.Status || 'New'
-        })).filter(o => o.qty > 0);
-        
-        // Date parsing fix
-        RAW_ORDERS.forEach(o => {
+        RAW_ORDERS = rows.map((r, i) => {
+            let o = { id:`UNK-${i}`, felt:'Unknown', qty:0, val:0, status:'' };
+            for(let k in r) {
+                const ck = k.toUpperCase().trim();
+                if(ck.includes('ORDER') && ck.includes('ID')) o.id = r[k];
+                else if(ck.includes('FELT') || ck.includes('PART')) o.felt = r[k];
+                else if(ck === 'BALANCE' || ck.includes('BAL YDS')) o.qty = parseFloat(r[k])||0;
+                else if((ck.includes('QTY') || ck.includes('QUANTITY')) && o.qty === 0) o.qty = parseFloat(r[k])||0;
+                else if(ck.includes('SALES') || ck.includes('VAL')) o.val = parseFloat(r[k])||0;
+                else if(ck.includes('RTS') || ck === 'REQDATE') o.rtsRaw = r[k];
+            }
             if(typeof o.rtsRaw === 'number') o.rtsDate = new Date(Math.round((o.rtsRaw - 25569)*86400*1000)).getTime();
             else if(o.rtsRaw) o.rtsDate = new Date(o.rtsRaw).getTime();
             else o.rtsDate = new Date('2099-12-31').getTime();
-        });
-
-        document.getElementById('orderStatus').innerText = RAW_ORDERS.length + " Orders";
+            return o;
+        }).filter(o => o.qty > 0);
+        document.getElementById('orderStatus').innerText = `${RAW_ORDERS.length} Orders Loaded`;
+        document.getElementById('orderStatus').className = "text-green-600 text-xs";
     }
 
     async function handleRateUpload(inp) {
@@ -1029,40 +870,449 @@
         const data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
         data.forEach(r => {
             const code = r['Felt Code'] || r['Code'];
-            if(code) RATES[code.trim()] = { card: parseFloat(r['Carding Rate (yds/hr)']||250), finish: parseFloat(r['Finishing Rate (yds/hr)']||700), qc: parseFloat(r['QC Rate (yds/hr)']||400) };
+            if(code) {
+                RATES[code.trim()] = {
+                    card: parseFloat(r['Carding Rate (yds/hr)'] || 250),
+                    finish: parseFloat(r['Finishing Rate (yds/hr)'] || 700),
+                    qc: parseFloat(r['QC Rate (yds/hr)'] || 400)
+                };
+            }
         });
         document.getElementById('rateStatus').innerText = "Rates Loaded";
+        document.getElementById('rateStatus').className = "text-green-600 text-xs";
+        renderRatesTable();
     }
 
     async function handleRouteUpload(inp) {
         const wb = await readFile(inp.files[0]);
         let sheetName = wb.SheetNames.find(n => n.includes('Sheet4')) || wb.SheetNames[0];
         const data = XLSX.utils.sheet_to_json(wb.Sheets[sheetName]);
+        
         let tempRoutes = {};
         data.forEach(r => {
-            const felt = r['FELTCODE']; const mach = r['MACHNAME'];
+            const felt = r['FELTCODE'];
+            const mach = r['MACHNAME'];
             if(felt && mach) {
                 if(!tempRoutes[felt]) tempRoutes[felt] = { card:[], fin:[], qc:[] };
                 const mUpper = mach.toUpperCase();
-                // Simple normalization
                 const normMach = CONFIG.machines.find(m => m.toUpperCase().replace(/\s/g,'') === mach.toUpperCase().replace(/\s/g,'').replace('#','')) || mach;
+                
                 if(mUpper.includes('CARD')) tempRoutes[felt].card.push(normMach);
                 else if(mUpper.includes('QC')) tempRoutes[felt].qc.push(normMach);
                 else tempRoutes[felt].fin.push(normMach);
             }
         });
         ROUTES = tempRoutes;
-        document.getElementById('routeStatus').innerText = "Routes Loaded";
+        document.getElementById('routeStatus').innerText = "Digital Schedule Loaded";
+        document.getElementById('routeStatus').className = "text-green-600 text-xs";
+        renderSequencingTable();
     }
 
-    function switchView(v) {
-        document.querySelectorAll('[id^="view-"]').forEach(e=>e.classList.add('hidden'));
-        document.getElementById('view-'+v).classList.remove('hidden');
-        if(v==='twin') updateFeltDropdown();
+    // --- SEQUENCING TAB ---
+    function renderSequencingTable() {
+        const tb = document.getElementById('sequencingTableBody');
+        tb.innerHTML = Object.keys(ROUTES).sort().map(f => {
+            const r = ROUTES[f];
+            return `
+            <tr class="hover:bg-slate-50 border-b border-slate-100">
+                <td class="p-4 font-bold text-blue-600">${f}</td>
+                <td class="p-4 text-xs">${r.card.join(', ')}</td>
+                <td class="p-4 text-xs">${r.fin.join(', ')}</td>
+                <td class="p-4 text-xs">${r.qc.join(', ')}</td>
+                <td class="p-4 text-center"><button onclick="editSequence('${f}')" class="text-blue-500 hover:underline text-xs">Edit</button></td>
+            </tr>`;
+        }).join('');
     }
-    function showModal(id) { document.getElementById(id).style.display='flex'; }
-    function changeZoom(d) { ZOOM_PX=Math.max(20, ZOOM_PX+d); renderGantt(SCHEDULE); }
-    function openEdit(id) { document.getElementById('editOrderModal').style.display='flex'; }
+
+    function editSequence(f) {
+        if(USER_ROLE !== 'admin') return alert('Admin only');
+        const r = ROUTES[f];
+        const c = prompt(`Preferred Cards for ${f} (comma separated):`, r.card.join(','));
+        const fn = prompt(`Preferred Finishing for ${f}:`, r.fin.join(','));
+        if(c !== null && fn !== null) {
+            ROUTES[f].card = c.split(',').map(s=>s.trim());
+            ROUTES[f].fin = fn.split(',').map(s=>s.trim());
+            renderSequencingTable();
+            runEngine();
+        }
+    }
+
+    function addNewRouteRow() {
+        if(USER_ROLE !== 'admin') return alert('Admin only');
+        const f = prompt("Enter new Felt Code:");
+        if(f) {
+            ROUTES[f] = { card:['Card 1'], fin:['Bruckner 1'], qc:['QC 1'] };
+            renderSequencingTable();
+        }
+    }
+
+    function applyMassSeq() {
+        if(USER_ROLE !== 'admin') return alert('Admin only');
+        const filter = document.getElementById('massSeqFilter').value.toUpperCase();
+        const c = document.getElementById('massSeqCard').value;
+        const f = document.getElementById('massSeqFin').value;
+        
+        Object.keys(ROUTES).forEach(k => {
+            if(k.toUpperCase().includes(filter)) {
+                if(c) ROUTES[k].card = [c];
+                if(f) ROUTES[k].fin = [f];
+            }
+        });
+        document.getElementById('massSeqModal').style.display='none';
+        renderSequencingTable();
+        runEngine();
+    }
+
+    // --- RATES TAB ---
+    function renderRatesTable() {
+        const tb = document.getElementById('ratesTableBody');
+        tb.innerHTML = Object.keys(RATES).sort().map(k => `
+            <tr class="hover:bg-slate-50 transition">
+                <td class="p-4 font-mono text-blue-600 font-bold">${k}</td>
+                <td class="p-4 text-right">${RATES[k].card}</td>
+                <td class="p-4 text-right">${RATES[k].finish}</td>
+                <td class="p-4 text-right">${RATES[k].qc}</td>
+                <td class="p-4 text-center">
+                    <button class="text-blue-500 hover:text-blue-700 mr-2 admin-only" onclick="openRateEdit('${k}')"><i class="fa-solid fa-pen"></i></button>
+                    <button class="text-red-400 hover:text-red-600 admin-only" onclick="deleteRate('${k}')"><i class="fa-solid fa-trash"></i></button>
+                </td>
+            </tr>`).join('');
+    }
+
+    function openRateEdit(felt) {
+        if(USER_ROLE !== 'admin') return alert('Admin only');
+        const r = RATES[felt];
+        document.getElementById('editRateFelt').innerText = felt;
+        document.getElementById('editRateCard').value = r.card;
+        document.getElementById('editRateFin').value = r.finish;
+        document.getElementById('editRateQC').value = r.qc;
+        document.getElementById('editRateModal').style.display = 'flex';
+    }
+
+    async function saveRateEdit() {
+        const felt = document.getElementById('editRateFelt').innerText;
+        const c = parseFloat(document.getElementById('editRateCard').value);
+        const f = parseFloat(document.getElementById('editRateFin').value);
+        const q = parseFloat(document.getElementById('editRateQC').value);
+        
+        RATES[felt] = { card:c, finish:f, qc:q };
+        
+        try {
+            await sb.from('rates').upsert({ felt_code: felt, card_rate: c, finish_rate: f, qc_rate: q });
+        } catch(e) {}
+
+        document.getElementById('editRateModal').style.display = 'none';
+        renderRatesTable();
+        runEngine(); // Re-run to reflect speed changes
+    }
+
+    function applyMassRate() {
+        if(USER_ROLE !== 'admin') return alert('Admin only');
+        const filter = document.getElementById('massRateFilter').value.toUpperCase();
+        const c = parseFloat(document.getElementById('massRateCard').value);
+        const f = parseFloat(document.getElementById('massRateFin').value);
+        const q = parseFloat(document.getElementById('massRateQC').value);
+        
+        Object.keys(RATES).forEach(k => {
+            if(k.toUpperCase().includes(filter)) {
+                if(c) RATES[k].card = c;
+                if(f) RATES[k].finish = f;
+                if(q) RATES[k].qc = q;
+            }
+        });
+        document.getElementById('massRateModal').style.display='none';
+        renderRatesTable();
+    }
+
+    function addNewRateRow() {
+        if(USER_ROLE !== 'admin') return alert('Admin only');
+        const f = prompt("Enter Felt Code:");
+        if(f) {
+            RATES[f] = { card:250, finish:700, qc:400 };
+            renderRatesTable();
+        }
+    }
+
+    // --- MAIN SCHEDULER & EDITING ---
+    function openEditModal(oid) {
+        const o = RAW_ORDERS.find(x => x.id === oid);
+        if(!o) return;
+        document.getElementById('editOrderId').innerText = oid;
+        document.getElementById('editQty').value = o.qty;
+        document.getElementById('editFelt').value = o.felt;
+        
+        const ov = OVERRIDES[oid] || {};
+        document.getElementById('forceCard').value = ov.card || "";
+        document.getElementById('forceFin').value = ov.fin || "";
+        document.getElementById('forceQC').value = ov.qc || "";
+        
+        document.getElementById('editOrderModal').style.display = 'flex';
+    }
+
+    function saveOrderEdit() {
+        if(USER_ROLE !== 'admin') return alert('Admin only');
+        const oid = document.getElementById('editOrderId').innerText;
+        const q = parseFloat(document.getElementById('editQty').value);
+        
+        const idx = RAW_ORDERS.findIndex(x => x.id === oid);
+        if(idx > -1) RAW_ORDERS[idx].qty = q;
+        
+        const fc = document.getElementById('forceCard').value;
+        const ff = document.getElementById('forceFin').value;
+        const fq = document.getElementById('forceQC').value;
+        
+        if(fc || ff || fq) {
+            OVERRIDES[oid] = { card: fc, fin: ff, qc: fq };
+        } else {
+            delete OVERRIDES[oid];
+        }
+        
+        document.getElementById('editOrderModal').style.display = 'none';
+        runEngine();
+    }
+
+    // --- RENDER GANTT ---
+    function renderAll() {
+        const tbody = document.getElementById('taskTableBody');
+        const timelineHeader = document.getElementById('timelineHeader');
+        const timelineBody = document.getElementById('timelineBody');
+        
+        tbody.innerHTML = '';
+        timelineHeader.innerHTML = '';
+        timelineBody.innerHTML = '';
+
+        if(!SCHEDULE.length) return;
+
+        const now = document.getElementById('simDate').valueAsDate.getTime();
+        const maxEnd = Math.max(...SCHEDULE.map(d=>d.globalEnd)) || now;
+        const totalDays = Math.ceil((maxEnd - now) / 86400000) + 10;
+        const width = totalDays * ZOOM_PX;
+
+        timelineHeader.style.width = `${width}px`;
+        const startDayIdx = Math.floor(now / 86400000);
+        
+        for(let i=0; i<totalDays; i++) {
+            const t = now + (i * 86400000);
+            const d = new Date(t);
+            const isWk = d.getDay()===0 || d.getDay()===6;
+            const load = DAY_LOADS[startDayIdx + i] || 0;
+            const heatClass = load > 200 ? 'bg-red-500' : (load > 100 ? 'bg-amber-400' : 'bg-green-500');
+            
+            const div = document.createElement('div');
+            div.className = `day-col ${isWk?'weekend':''}`;
+            div.style.width = `${ZOOM_PX}px`;
+            div.innerHTML = `
+                <span class="mt-2 font-bold">${d.getDate()}</span>
+                <span style="font-size:9px">${d.toLocaleString('default',{month:'short'})}</span>
+                <div class="absolute bottom-0 left-0 right-0 h-1 ${heatClass} opacity-50"></div>
+            `;
+            timelineHeader.appendChild(div);
+        }
+
+        SCHEDULE.forEach(row => {
+            const isForced = OVERRIDES[row.id];
+            const tr = document.createElement('tr');
+            if(row.isLate) tr.classList.add('late-row');
+            tr.innerHTML = `
+                <td><span class="inline-block w-2 h-2 rounded-full mr-2 ${row.isLate?'bg-red-500':'bg-green-500'}"></span>${row.status || 'New'}</td>
+                <td class="font-mono text-xs cursor-pointer hover:text-blue-600 underline ${isForced?'override-text':''}" onclick="openEditModal('${row.id}')">${row.id} ${isForced?'*':''}</td>
+                <td class="font-bold text-blue-600 text-xs">${row.felt}</td>
+                <td class="text-[10px] text-slate-500">${row.card.mach}</td>
+                <td class="text-[10px] text-slate-500">${row.fin.mach}</td>
+                <td class="text-right font-mono text-xs">${row.qty.toLocaleString()}</td>
+            `;
+            tbody.appendChild(tr);
+
+            const trDiv = document.createElement('div');
+            trDiv.className = 'chart-row';
+            trDiv.style.width = `${width}px`;
+
+            const drawBar = (task, type) => {
+                if(!task.start || task.mach === 'Err') return;
+                const startPx = ((task.start - now) / 86400000) * ZOOM_PX;
+                const durPx = Math.max(((task.end - task.start) / 86400000) * ZOOM_PX, 4);
+                
+                const b = document.createElement('div');
+                b.className = `bar bar-${type} ${isForced?'bar-forced':''}`;
+                b.style.left = `${startPx}px`;
+                b.style.width = `${durPx}px`;
+                b.innerText = task.mach;
+                b.onclick = () => openEditModal(row.id);
+                b.onmouseover = (e) => showTooltip(e, `${row.id} (${row.felt})\n${task.mach}\n${new Date(task.start).toLocaleString()} - ${new Date(task.end).toLocaleString()}`);
+                b.onmouseout = () => document.getElementById('tooltip').style.display='none';
+                trDiv.appendChild(b);
+            };
+
+            drawBar(row.card, 'card');
+            drawBar(row.fin, 'fin');
+            drawBar(row.qc, 'qc');
+            timelineBody.appendChild(trDiv);
+        });
+    }
+
+    // --- ANALYTICS ---
+    function renderKPIs() {
+        const totYds = SCHEDULE.reduce((a,b)=>a+b.qty,0);
+        const totRev = SCHEDULE.reduce((a,b)=>a+b.val,0);
+        const lateVal = SCHEDULE.filter(x=>x.isLate).reduce((a,b)=>a+b.val,0);
+        
+        document.getElementById('kpiYds').innerText = totYds.toLocaleString();
+        document.getElementById('kpiRev').innerText = '$' + (totRev/1000000).toFixed(2) + 'M';
+        document.getElementById('kpiLate').innerText = '$' + lateVal.toLocaleString();
+
+        // CHARTS
+        if(CHARTS.load) CHARTS.load.destroy();
+        if(CHARTS.rev) CHARTS.rev.destroy();
+
+        const machLoad = {};
+        const revData = {};
+        SCHEDULE.forEach(r => {
+            [r.card, r.fin, r.qc].forEach(t => {
+                if(t.mach && t.mach!=='Err') machLoad[t.mach] = (machLoad[t.mach]||0) + r.qty;
+            });
+            const m = new Date(r.globalEnd).toLocaleString('default',{month:'short'});
+            revData[m] = (revData[m]||0) + r.val;
+        });
+
+        CHARTS.load = new Chart(document.getElementById('chartLoad'), {
+            type: 'bar',
+            data: { labels: Object.keys(machLoad), datasets: [{ label: 'Yards', data: Object.values(machLoad), backgroundColor: '#3b82f6' }] },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+
+        CHARTS.rev = new Chart(document.getElementById('chartRev'), {
+            type: 'line',
+            data: { labels: Object.keys(revData), datasets: [{ label: 'Revenue', data: Object.values(revData), borderColor: '#22c55e', fill: true, backgroundColor:'rgba(34,197,94,0.1)' }] },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
+
+    // --- HELPERS & DOWNTIME FIXED ---
+    async function addDowntime() {
+        if(USER_ROLE !== 'admin') return alert('Admin only');
+        const m = document.getElementById('dtMachine').value;
+        const s = document.getElementById('dtStart').value;
+        const e = document.getElementById('dtEnd').value;
+        if (!m || !s || !e) return;
+
+        // OPTIMISTIC UPDATE: Update local state immediately
+        const newEntry = {
+            id: 'temp-' + Date.now(),
+            machine: m,
+            start: new Date(s).getTime(),
+            end: new Date(e).getTime(),
+            reason: 'Planned'
+        };
+
+        // Try DB save, but don't block
+        try {
+            const { data, error } = await sb.from('downtime').insert({
+                machine: m, start_time: s, end_time: e, reason: 'Planned'
+            }).select().single();
+            
+            if(!error && data) {
+                newEntry.id = data.id; // Update with real ID
+            }
+        } catch(err) {
+            console.warn("DB Save failed, using local session state only");
+        }
+
+        DOWNTIME.push(newEntry);
+        renderDowntimeTable();
+        runEngine();
+    }
+
+    function renderDowntimeTable() {
+        const tb = document.getElementById('dtBody');
+        tb.innerHTML = DOWNTIME.map((d, i) => `
+            <tr class="border-b border-slate-100">
+                <td class="p-4 font-bold text-slate-700">${d.machine}</td>
+                <td class="p-4 text-slate-500">${new Date(d.start).toLocaleString()}</td>
+                <td class="p-4 text-slate-500">${new Date(d.end).toLocaleString()}</td>
+                <td class="p-4 text-slate-500 italic">${d.reason}</td>
+                <td class="p-4 text-center"><button class="text-red-500 hover:text-red-700 admin-only" onclick="remDT(${i})"><i class="fa-solid fa-trash"></i></button></td>
+            </tr>
+        `).join('');
+    }
+
+    async function remDT(i) {
+        if(USER_ROLE !== 'admin') return alert('Admin only');
+        DOWNTIME.splice(i, 1);
+        renderDowntimeTable();
+        runEngine();
+    }
+
+    function runEngine() {
+        if(!RAW_ORDERS.length) return;
+        document.getElementById('engineStatus').innerText = "SOLVING...";
+        document.getElementById('engineStatus').className = "text-yellow-600 animate-pulse";
+        
+        const simStart = document.getElementById('simDate').valueAsDate 
+            ? document.getElementById('simDate').valueAsDate.getTime() 
+            : new Date().setHours(8,0,0,0);
+
+       const activeOrders = RAW_ORDERS.filter(o => 
+            !String(o.status).toUpperCase().includes('SHIPPED')
+    // We removed '&& o.rtsDate >= simStart' so it includes the backlog
+);
+
+        WORKER.postMessage({
+            orders: activeOrders,
+            rates: RATES,
+            config: CONFIG,
+            downtime: DOWNTIME,
+            simStart: simStart,
+            routes: ROUTES,
+            staffing: STAFFING,
+            overrides: OVERRIDES
+        });
+    }
+
+    function renderStaffingTable() {
+        const tb = document.getElementById('staffingTableBody');
+        tb.innerHTML = '';
+        CONFIG.machines.forEach(m => {
+            const s = STAFFING[m];
+            tb.innerHTML += `
+                <tr class="border-b border-slate-100 hover:bg-slate-50">
+                    <td class="p-4 font-bold text-slate-700">${m}</td>
+                    <td class="p-4 text-center"><input type="checkbox" ${s[0]?'checked':''} onchange="updateStaffing('${m}', 0, this.checked)" class="w-5 h-5 text-blue-600 rounded"></td>
+                    <td class="p-4 text-center"><input type="checkbox" ${s[1]?'checked':''} onchange="updateStaffing('${m}', 1, this.checked)" class="w-5 h-5 text-blue-600 rounded"></td>
+                    <td class="p-4 text-center"><input type="checkbox" ${s[2]?'checked':''} onchange="updateStaffing('${m}', 2, this.checked)" class="w-5 h-5 text-blue-600 rounded"></td>
+                </tr>
+            `;
+        });
+    }
+    function updateStaffing(m, i, v) { STAFFING[m][i] = v; }
+    function switchView(view) {
+        document.querySelectorAll('[id^="view-"]').forEach(el => el.classList.add('hidden'));
+        document.getElementById('view-'+view).classList.remove('hidden');
+        document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById('nav-'+view).classList.add('active');
+        if(view==='kpi') renderKPIs();
+    }
+    function showModal(id) { 
+        if(id !== 'uploadModal' && USER_ROLE !== 'admin') return alert("Admin only"); 
+        document.getElementById(id).style.display = 'flex'; 
+    }
+    function changeZoom(d) { ZOOM_PX = Math.max(20, Math.min(200, ZOOM_PX + d)); renderAll(); }
+    function showTooltip(e, txt) {
+        const tt = document.getElementById('tooltip');
+        tt.style.display = 'block';
+        tt.style.left = e.pageX + 10 + 'px';
+        tt.style.top = e.pageY + 10 + 'px';
+        tt.innerText = txt;
+    }
+    
+    // COMMENTED OUT TO FIX SCROLLING CONFLICTS
+    /*
+    const g = document.getElementById('ganttChart');
+    let isDown=false, startX, scrollLeft;
+    g.addEventListener('mousedown',e=>{isDown=true;startX=e.pageX-g.offsetLeft;scrollLeft=g.scrollLeft;});
+    g.addEventListener('mouseleave',()=>isDown=false);
+    g.addEventListener('mouseup',()=>isDown=false);
+    g.addEventListener('mousemove',e=>{if(!isDown)return;e.preventDefault();const x=e.pageX-g.offsetLeft;const walk=(x-startX)*2;g.scrollLeft=scrollLeft-walk;});
+    */
 </script>
 </body>
 </html>

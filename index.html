@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Alkegen Scheduler v6.0 (Digital Twin + ESG)</title>
+  <title>Alkegen Scheduler v6.1 (Stable Engine + Features)</title>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -127,7 +127,7 @@
                 <h1 class="font-bold text-lg text-slate-800 leading-tight">Alkegen <span class="text-blue-600">Production</span></h1>
                 <div class="flex items-center gap-2 text-xs text-slate-500 font-medium">
                     <span class="w-2 h-2 rounded-full bg-green-500"></span> <span id="userRoleBadge">Viewer</span> Mode
-                    <span class="ml-2 px-1.5 py-0.5 bg-slate-100 border border-slate-200 rounded text-[9px] font-mono text-slate-400">v6.0 TWIN+ESG</span>
+                    <span class="ml-2 px-1.5 py-0.5 bg-slate-100 border border-slate-200 rounded text-[9px] font-mono text-slate-400">v6.1 (Stable Engine)</span>
                 </div>
             </div>
         </div>
@@ -146,6 +146,9 @@
             <span id="userEmailDisplay" class="text-xs text-slate-400 mr-2 font-mono"></span>
             <button onclick="showModal('uploadModal')" class="admin-only px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-lg shadow-sm transition flex items-center gap-2">
                 <i class="fa-solid fa-cloud-arrow-up"></i> Import
+            </button>
+            <button onclick="exportExcel()" class="w-9 h-9 flex items-center justify-center text-green-600 hover:bg-green-50 rounded-lg border border-green-200 transition" title="Export Excel">
+                <i class="fa-solid fa-file-excel text-lg"></i>
             </button>
             <button onclick="handleLogout()" class="w-9 h-9 flex items-center justify-center text-slate-400 hover:bg-slate-100 rounded-lg border border-slate-200 transition" title="Logout">
                 <i class="fa-solid fa-right-from-bracket"></i>
@@ -516,80 +519,170 @@
 
 <script id="worker-script" type="javascript/worker">
     self.onmessage = function(e) {
-        const { orders, rates, config, downtime, simStart, routes, overrides } = e.data;
+        const { orders, rates, config, downtime, simStart, routes, staffing, overrides } = e.data;
         const MACHINES = config.machines;
+        
         let schedule = [];
         let now = simStart || new Date().getTime();
         let machineState = {};
+        let activeDowntime = [...downtime];
+
+        // 1. STAFFING DOWNTIME
+        for(let d=0; d<60; d++) {
+            const dayStart = now + (d * 86400000);
+            const midnight = new Date(dayStart).setHours(0,0,0,0);
+            Object.keys(staffing).forEach(machName => {
+                const avail = staffing[machName];
+                if(!avail) return;
+                if(!avail[0]) activeDowntime.push({ machine: machName, start: midnight + (8*3600000), end: midnight + (16*3600000), reason: 'Staffing' });
+                if(!avail[1]) activeDowntime.push({ machine: machName, start: midnight + (16*3600000), end: midnight + (24*3600000), reason: 'Staffing' });
+                if(!avail[2]) activeDowntime.push({ machine: machName, start: midnight, end: midnight + (8*3600000), reason: 'Staffing' });
+            });
+        }
+
+        // Init State
         MACHINES.forEach(m => { machineState[m] = { time: now, lastFelt: null }; });
 
-        // Logic (Scored)
+        // 2. CAMPAIGN SORT
         let queue = [...orders];
-        if (config.campaign) queue.sort((a,b) => {
-            const dateA = a.rtsDate || 9e12; const dateB = b.rtsDate || 9e12;
-            const weekA = Math.floor(dateA/6048e5); const weekB = Math.floor(dateB/6048e5);
-            if(weekA !== weekB) return weekA - weekB;
-            if(a.felt < b.felt) return -1;
-            if(a.felt > b.felt) return 1;
-            return dateA - dateB;
-        }); else queue.sort((a,b) => a.rtsDate - b.rtsDate);
+        if (config.campaign) {
+            queue.sort((a,b) => {
+                const dateA = a.rtsDate || 9999999999999;
+                const dateB = b.rtsDate || 9999999999999;
+                const weekA = Math.floor(dateA / (7 * 86400000));
+                const weekB = Math.floor(dateB / (7 * 86400000));
+                if (weekA !== weekB) return weekA - weekB;
+                if (a.felt < b.felt) return -1;
+                if (a.felt > b.felt) return 1;
+                return dateA - dateB;
+            });
+        } else {
+            queue.sort((a,b) => a.rtsDate - b.rtsDate);
+        }
 
+        // 3. SCHEDULER
         queue.forEach(ord => {
             const r = rates[ord.felt] || Object.values(rates)[0] || {card:250, finish:700, qc:400};
-            let prefs = routes[ord.felt] || { card: MACHINES.filter(m=>m.includes('Card')), fin: MACHINES.filter(m=>m.includes('Bruckner')||m.includes('Singer')), qc: MACHINES.filter(m=>m.includes('QC')) };
+            
+            // Preference List from Sheet 4 (or generic fallback)
+            let prefs = routes[ord.felt] || {
+                card: MACHINES.filter(m => m.includes('Card')),
+                fin: MACHINES.filter(m => m.includes('Bruckner') || m.includes('Kusters') || m.includes('Singer') || m.includes('Dilo')),
+                qc: MACHINES.filter(m => m.includes('QC'))
+            };
+
+            // USER OVERRIDES
             if(overrides[ord.id]) {
                 if(overrides[ord.id].card) prefs.card = [overrides[ord.id].card];
                 if(overrides[ord.id].fin) prefs.fin = [overrides[ord.id].fin];
                 if(overrides[ord.id].qc) prefs.qc = [overrides[ord.id].qc];
             }
 
-            let cRes = allocateSmart(prefs.card, now, (ord.qty/(r.card||250)), ord.felt);
-            let fReady = cRes.end + 3600000; 
-            let fRes = allocateSmart(prefs.fin, fReady, (ord.qty/(r.finish||700)), ord.felt);
-            let qReady = fRes.end + 1800000; 
-            let qRes = allocateSmart(prefs.qc, qReady, (ord.qty/(r.qc||400)), ord.felt);
+            // SMART ALLOCATION: Score machines based on fit
+            // --- STEP 1: CARDING ---
+            let cRes = allocateSmart(prefs.card, now, (ord.qty / (r.card||250)), ord.felt);
+            
+            // --- STEP 2: FINISHING ---
+            let fReady = cRes.end + 3600000; // 1hr move
+            let fRes = allocateSmart(prefs.fin, fReady, (ord.qty / (r.finish||700)), ord.felt);
 
-            schedule.push({ ...ord, card:cRes, fin:fRes, qc:qRes, globalEnd:qRes.end, isLate:qRes.end > ord.rtsDate });
+            // --- STEP 3: QC ---
+            let qReady = fRes.end + 1800000; // 30m move
+            let qRes = allocateSmart(prefs.qc, qReady, (ord.qty / (r.qc||400)), ord.felt);
+
+            schedule.push({
+                ...ord,
+                card: cRes, fin: fRes, qc: qRes,
+                allMachs: [cRes.mach, fRes.mach, qRes.mach],
+                globalEnd: qRes.end,
+                isLate: qRes.end > ord.rtsDate
+            });
         });
 
+        // Helper: Scored Allocation (Look-Ahead Logic)
         function allocateSmart(pool, readyTime, durHrs, felt) {
-            if(!pool || !pool.length) return { mach:'Err', start:readyTime, end:readyTime };
+            if(!pool || pool.length === 0) return { mach:'Err', start:readyTime, end:readyTime };
+            
             const durMs = durHrs * 3600000;
             let candidates = [];
+
             pool.forEach(mName => {
                 const mState = machineState[mName] || { time: now, lastFelt: null };
                 let start = Math.max(mState.time, readyTime);
                 let hasSetup = false;
-                if(mState.lastFelt && mState.lastFelt !== felt) { start += (config.setupPenalty * 3600000); hasSetup = true; }
-                let conflict=true, attempts=0;
-                while(conflict && attempts<50) {
-                    conflict=false; const potentialEnd=start+durMs;
-                    const dt = downtime.find(d => d.machine === mName && d.start < potentialEnd && d.end > start);
-                    if(dt) { start=dt.end; conflict=true; } attempts++;
+                
+                // Setup Penalty Logic
+                if(mState.lastFelt && mState.lastFelt !== felt) {
+                    start += (config.setupPenalty * 3600000);
+                    hasSetup = true;
                 }
-                candidates.push({ mach:mName, start:start, end:start+durMs, hasSetup:hasSetup });
+
+                // Downtime Check
+                let conflict = true;
+                let attempts = 0;
+                while(conflict && attempts < 50) {
+                    conflict = false;
+                    const potentialEnd = start + durMs;
+                    const dt = activeDowntime.find(d => d.machine === mName && d.start < potentialEnd && d.end > start);
+                    if (dt) {
+                        start = dt.end;
+                        conflict = true;
+                    }
+                    attempts++;
+                }
+
+                candidates.push({
+                    mach: mName,
+                    start: start,
+                    end: start + durMs,
+                    hasSetup: hasSetup
+                });
             });
-            candidates.sort((a,b) => (a.hasSetup === b.hasSetup ? a.end - b.end : (a.hasSetup ? 1 : -1)));
+
+            // SCORING: 
+            // 1. Prefer machines that are ALREADY SET UP for this felt (avoid changeover), 
+            //    unless the delay is huge (> 4 hours).
+            // 2. Otherwise pick earliest finish.
+            
+            candidates.sort((a,b) => {
+                const delayA = a.end;
+                const delayB = b.end;
+                
+                // If A has setup and B doesn't, favor B heavily unless B is way later
+                if (a.hasSetup && !b.hasSetup) {
+                    // If B is available within 4 hours of A, take B (avoid setup)
+                    if (delayB < delayA + 14400000) return 1; 
+                }
+                if (!a.hasSetup && b.hasSetup) {
+                    if (delayA < delayB + 14400000) return -1;
+                }
+
+                return delayA - delayB;
+            });
+
             const best = candidates[0];
+
             if(best) {
-                if(!machineState[best.mach]) machineState[best.mach] = { time:now, lastFelt:null };
+                if(!machineState[best.mach]) machineState[best.mach] = { time: now, lastFelt: null };
                 machineState[best.mach].time = best.end;
                 machineState[best.mach].lastFelt = felt;
-                return { mach:best.mach, start:best.start, end:best.end };
+                return { mach: best.mach, start: best.start, end: best.end };
             }
             return { mach:'Err', start:readyTime, end:readyTime+durMs };
         }
-        
-        // Analytics
+
+        // 4. ANALYTICS
         let dayLoads = {};
         schedule.forEach(s => {
             [s.card, s.fin, s.qc].forEach(t => {
                 if(t.start && t.end) {
-                    const sd = Math.floor(t.start/86400000), ed = Math.floor(t.end/86400000);
-                    for(let i=sd; i<=ed; i++) dayLoads[i] = (dayLoads[i]||0)+1;
+                    const startDay = Math.floor(t.start / 86400000);
+                    const endDay = Math.floor(t.end / 86400000);
+                    for(let i=startDay; i<=endDay; i++) dayLoads[i] = (dayLoads[i]||0) + 1;
                 }
             });
         });
+
         self.postMessage({ schedule, dayLoads });
     };
 </script>
@@ -603,11 +696,12 @@
     const CONFIG = {
         machines: ['Card 1','Card 2','Card 3','Card 4','Card 5','Card 6','Card 7','Card 8','Card 9',
                    'Bruckner 1','Bruckner 2','Kusters','Singer 1','Singer 2','Perkins','Hunter','Dilo',
-                   'QC 1','QC 2','QC 3','QC 4','QC 5','QC 6','QC Lab'],
+                   'Fehrer 228', 'Heatset', 'Needleloom', // Added missing machines from v5.2 config
+                   'QC 1','QC 2','QC 3','QC 4','QC 5','QC 6','QC 7','QC 8','QC Lab'], // Restored full list
         setupPenalty: 4, campaign: true
     };
 
-    let RATES={}; let RAW_ORDERS=[]; let ROUTES={}; let OVERRIDES={}; let DOWNTIME=[]; let SCHEDULE=[];
+    let RATES={}; let RAW_ORDERS=[]; let ROUTES={}; let OVERRIDES={}; let DOWNTIME=[]; let SCHEDULE=[]; let STAFFING={};
     let WORKER=null; let CHART_LOAD=null; let CHART_REV=null; let ZOOM_PX=60; let USER_ROLE='viewer';
 
     // --- MAIN INIT ---
@@ -628,6 +722,9 @@
         if(USER_ROLE==='admin') document.body.classList.add('is-admin');
         
         document.getElementById('simDate').valueAsDate = new Date();
+        // Init Staffing Default
+        CONFIG.machines.forEach(m => STAFFING[m] = [true, true, true]);
+        
         initWorker();
         initDigitalTwinCanvas();
         populateDropdowns();
@@ -657,9 +754,23 @@
     }
 
     function runEngine() {
+        if(!RAW_ORDERS.length) return;
         document.getElementById('engineStatus').innerText = "SOLVING...";
         const simStart = document.getElementById('simDate').valueAsDate ? document.getElementById('simDate').valueAsDate.getTime() : new Date().setHours(8,0,0,0);
-        WORKER.postMessage({ orders:RAW_ORDERS, rates:RATES, config:CONFIG, downtime:DOWNTIME, simStart, routes:ROUTES, overrides:OVERRIDES });
+        
+        // v5.2 Logic required filtering orders first
+        const activeOrders = RAW_ORDERS.filter(o => !String(o.status).toUpperCase().includes('SHIPPED') && o.rtsDate >= simStart);
+
+        WORKER.postMessage({ 
+            orders:activeOrders, 
+            rates:RATES, 
+            config:CONFIG, 
+            downtime:DOWNTIME, 
+            simStart:simStart, 
+            routes:ROUTES, 
+            staffing:STAFFING, // Critical: pass staffing back in
+            overrides:OVERRIDES 
+        });
     }
 
     // --- GANTT & KPI RENDERING (Condensed) ---
@@ -883,14 +994,66 @@
         document.getElementById('analysisText').innerHTML = `A <strong>$${capex.toLocaleString()}</strong> investment yielding <strong>${eff}% efficiency</strong> breaks even in <strong>${payback.toFixed(1)} years</strong>. 10-Year Net Benefit: <strong>$${net10y.toLocaleString()}</strong>.`;
     }
 
-    // --- EXCEL & FILE HANDLING (Existing) ---
+    // --- EXCEL & FILE HANDLING ---
     function readFile(f) { return new Promise(r=>{const rd=new FileReader(); rd.onload=e=>r(XLSX.read(new Uint8Array(e.target.result),{type:'array'})); rd.readAsArrayBuffer(f);}); }
+    
     async function handleOrderUpload(i) {
-        const wb=await readFile(i.files[0]); const s=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-        RAW_ORDERS = s.map((r,x)=>({id:r.OrderID||`ORD-${x}`, felt:r.Felt||'UNK', qty:r.Qty||0, val:r.Val||0, rtsDate:r.Date?new Date(r.Date).getTime():new Date().getTime()}));
+        const wb=await readFile(i.files[0]); 
+        let rows = [];
+        for(const sn of wb.SheetNames) {
+            const raw = XLSX.utils.sheet_to_json(wb.Sheets[sn], {header:1});
+            const idx = raw.findIndex(r => r && r.some(c => String(c).toUpperCase().includes('ORDER')));
+            if(idx > -1) { rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], {range:idx}); break; }
+        }
+        RAW_ORDERS = rows.map((r, x)=>({
+            id: r.OrderID || r['Order ID'] || `ORD-${x}`, 
+            felt: r.Felt || r['Felt Code'] || 'UNK', 
+            qty: parseFloat(r.Qty || r['Balance'] || r['Bal Yds'] || 0), 
+            val: parseFloat(r.Val || r['Sales Value'] || 0), 
+            rtsRaw: r['RTS Date'] || r.Date || r.ReqDate,
+            status: r.Status || 'New'
+        })).filter(o => o.qty > 0);
+        
+        // Date parsing fix
+        RAW_ORDERS.forEach(o => {
+            if(typeof o.rtsRaw === 'number') o.rtsDate = new Date(Math.round((o.rtsRaw - 25569)*86400*1000)).getTime();
+            else if(o.rtsRaw) o.rtsDate = new Date(o.rtsRaw).getTime();
+            else o.rtsDate = new Date('2099-12-31').getTime();
+        });
+
         document.getElementById('orderStatus').innerText = RAW_ORDERS.length + " Orders";
     }
-    // (Other upload handlers kept brief for length, logic is identical to v5.2)
+
+    async function handleRateUpload(inp) {
+        const wb = await readFile(inp.files[0]);
+        const data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+        data.forEach(r => {
+            const code = r['Felt Code'] || r['Code'];
+            if(code) RATES[code.trim()] = { card: parseFloat(r['Carding Rate (yds/hr)']||250), finish: parseFloat(r['Finishing Rate (yds/hr)']||700), qc: parseFloat(r['QC Rate (yds/hr)']||400) };
+        });
+        document.getElementById('rateStatus').innerText = "Rates Loaded";
+    }
+
+    async function handleRouteUpload(inp) {
+        const wb = await readFile(inp.files[0]);
+        let sheetName = wb.SheetNames.find(n => n.includes('Sheet4')) || wb.SheetNames[0];
+        const data = XLSX.utils.sheet_to_json(wb.Sheets[sheetName]);
+        let tempRoutes = {};
+        data.forEach(r => {
+            const felt = r['FELTCODE']; const mach = r['MACHNAME'];
+            if(felt && mach) {
+                if(!tempRoutes[felt]) tempRoutes[felt] = { card:[], fin:[], qc:[] };
+                const mUpper = mach.toUpperCase();
+                // Simple normalization
+                const normMach = CONFIG.machines.find(m => m.toUpperCase().replace(/\s/g,'') === mach.toUpperCase().replace(/\s/g,'').replace('#','')) || mach;
+                if(mUpper.includes('CARD')) tempRoutes[felt].card.push(normMach);
+                else if(mUpper.includes('QC')) tempRoutes[felt].qc.push(normMach);
+                else tempRoutes[felt].fin.push(normMach);
+            }
+        });
+        ROUTES = tempRoutes;
+        document.getElementById('routeStatus').innerText = "Routes Loaded";
+    }
 
     function switchView(v) {
         document.querySelectorAll('[id^="view-"]').forEach(e=>e.classList.add('hidden'));
